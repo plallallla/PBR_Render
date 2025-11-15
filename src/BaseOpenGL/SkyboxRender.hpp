@@ -82,7 +82,7 @@ public:
 };
 
 inline std::string SkyboxRender::default_vs_src = R"(
-#version 330 core
+#version 400 core
 layout (location = 0) in vec3 aPos;
 out vec3 TexCoords;
 uniform mat4 projection;
@@ -96,7 +96,7 @@ void main()
 )";
 
 inline std::string SkyboxRender::default_fs_src = R"(
-#version 330 core
+#version 400 core
 out vec4 FragColor;
 in vec3 TexCoords;
 uniform samplerCube skybox;

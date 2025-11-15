@@ -1,6 +1,6 @@
 #version 330 core
 out vec4 FragColor;
-in vec3 WorldPos;
+in vec3 vout_world_position;
 
 uniform samplerCube environmentMap;
 
@@ -13,7 +13,7 @@ void main()
     // incoming radiance of the environment. The result of this radiance
     // is the radiance of light coming from -Normal direction, which is what
     // we use in the PBR shader to sample irradiance.
-    vec3 N = normalize(WorldPos);
+    vec3 N = normalize(vout_world_position);
 
     vec3 irradiance = vec3(0.0);   
     

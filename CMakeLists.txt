@@ -19,7 +19,8 @@ find_package(imgui CONFIG REQUIRED)
 add_executable(PBR_Render src/main.cpp)
 
 target_compile_definitions(PBR_Render PRIVATE TEXTURE_PATH=std::string{"../resources/textures/"})
-target_compile_definitions(PBR_Render PRIVATE SHADERS_PATH="1.2.3")
+target_compile_definitions(PBR_Render PRIVATE OBJ_PATH=std::string{"../resources/obj/"})
+target_compile_definitions(PBR_Render PRIVATE SHADERS_PATH=std::string{"../resources/shaders/"})
 
 target_link_libraries(PBR_Render PRIVATE glfw glad::glad assimp::assimp spdlog::spdlog_header_only imgui::imgui)
 target_include_directories(PBR_Render PRIVATE ${Stb_INCLUDE_DIR})

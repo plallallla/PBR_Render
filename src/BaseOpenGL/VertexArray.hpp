@@ -140,4 +140,16 @@ public:
         attach_layout(layout);
         glBindVertexArray(0);
     }
+    inline static void render_empty_va()
+    {
+        static GLuint va = [] () -> GLuint
+        {
+            GLuint vao;
+            glGenVertexArrays(1, &vao);
+            glBindVertexArray(vao);
+            return vao;
+        }();
+        glBindVertexArray(va);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
 };

@@ -3,6 +3,7 @@
 #include "ShaderProgram.hpp"
 #include "Shape.hpp"
 #include "Texture.hpp"
+#include "VertexArray.hpp"
 #include <vector>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -53,7 +54,11 @@ public:
 
 class EquirectConvertRender : public PrecomputedRender
 {
-    ShaderProgram _sp{"../glsl/ibl/cube.vs", "../glsl/ibl/cube.fs"};
+    ShaderProgram _sp
+    {
+        SHADERS_PATH + "common_vertex/cube.vert", 
+        SHADERS_PATH + "pre_process/equirectangular.frag"
+    };
 public:
     EquirectConvertRender(GLuint width = 512, GLuint height = 512) : PrecomputedRender{ width, height } {}
     virtual void execute(GLuint hdr_texture) override
@@ -62,12 +67,11 @@ public:
         glViewport(0, 0, _width, _height);
         _sp.use();
         _sp.set_uniform("equirectangularMap", 0);
-        _sp.set_uniform("projection", capture_projection);
         _sp.active_sampler(0, hdr_texture);
         _fb.bind();
         for (GLuint i = 0; i < 6; ++i)
         {
-            _sp.set_uniform("view", capture_views[i]);
+            _sp.set_uniform("projection_view", capture_projection * capture_views[i]);
             _fb.attach_color_texture(0, _result, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             Shape::render_cube();
@@ -76,11 +80,15 @@ public:
     }
 };
 
-class DiffuseIrradianceIBL : public PrecomputedRender
+class ConvolutionIBLRender : public PrecomputedRender
 {
-    ShaderProgram _sp{"../glsl/ibl/cube.vs", "../glsl/ibl/irradiance_convolution.fs"};
+    ShaderProgram _sp
+    {
+        SHADERS_PATH + "common_vertex/cube.vert", 
+        SHADERS_PATH + "pre_process/convolution.frag.frag"
+    };        
 public:
-    DiffuseIrradianceIBL(GLuint width = 64, GLuint height = 64) : PrecomputedRender{ width, height } {}
+    ConvolutionIBLRender(GLuint width = 64, GLuint height = 64) : PrecomputedRender{ width, height } {}
     virtual void execute(GLuint cube_texture) override
     {
         _result = TEXTURE_MANAGER.generate_cube_texture_buffer(_width, _height, TEXTURE_CUBE_RGB_FLOAT);
@@ -89,11 +97,10 @@ public:
         glViewport(0, 0, _width, _height);
         _sp.use();
         _sp.set_sampler(0, "environmentMap");
-        _sp.set_uniform("projection", capture_projection);
         _sp.active_sampler(0, cube_texture, GL_TEXTURE_CUBE_MAP);
         for (GLuint i = 0; i < 6; ++i)
         {
-            _sp.set_uniform("view", capture_views[i]);
+            _sp.set_uniform("projection_view", capture_projection * capture_views[i]);
             _fb.attach_color_texture(0, _result, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             Shape::render_cube();
@@ -102,11 +109,15 @@ public:
     }
 };
 
-class SpecularPrefilterIBL : public PrecomputedRender
+class PrefilterIBLRender : public PrecomputedRender
 {
-    ShaderProgram _sp{"../glsl/ibl/cube.vs", "../glsl/ibl/prefilter.fs"};
+    ShaderProgram _sp
+    {
+        SHADERS_PATH + "common_vertex/cube.vert", 
+        SHADERS_PATH + "pre_process/prefilter.frag"
+    };
 public:
-    SpecularPrefilterIBL(GLuint width = 128, GLuint height = 128) : PrecomputedRender{ width, height } {}
+    PrefilterIBLRender(GLuint width = 128, GLuint height = 128) : PrecomputedRender{ width, height } {}
     virtual void execute(GLuint cube_texture) override
     {
         _result = TEXTURE_MANAGER.generate_cube_texture_buffer(_width, _height, TEXTURE_CUBE_PREFILTER);
@@ -127,6 +138,7 @@ public:
             for (GLuint i = 0; i < 6; ++i)
             {
                 _sp.set_uniform("view", capture_views[i]);
+                _sp.set_uniform("projection_view", capture_projection * capture_views[i]);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, _result, mip);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                 Shape::render_cube();
@@ -138,7 +150,11 @@ public:
 
 class BRDF_LUT : public PrecomputedRender
 {
-    ShaderProgram _sp{"../glsl/ibl/brdf.vs", "../glsl/ibl/brdf.fs"};
+    ShaderProgram _sp
+    {
+        SHADERS_PATH + "common_vertex/quad.vert", 
+        SHADERS_PATH + "pre_process/brdf_lut.frag"
+    };
 public:
     BRDF_LUT(GLuint width = 512, GLuint height = 512) : PrecomputedRender{ width, height } {}    
     virtual void execute(GLuint texture = 0) override
@@ -151,7 +167,7 @@ public:
         glViewport(0, 0, _width, _height);
         _sp.use();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        Shape::render_quad();
+        VertexArray::render_empty_va();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);        
     }
 };

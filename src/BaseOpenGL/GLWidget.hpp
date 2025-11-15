@@ -6,6 +6,10 @@
  * 
  */
 #pragma once
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include "Input.hpp"
 #include <mutex>
 #include <imgui.h>
@@ -48,10 +52,11 @@ public:
         static std::once_flag gloable_init;
         std::call_once(gloable_init, [&] () 
         {
+            stbi_set_flip_vertically_on_load(true);        
             glfwInit();
         });
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
