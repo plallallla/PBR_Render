@@ -1,4 +1,4 @@
-#version core 400
+#version 400 core
 
 layout (location = 0) out vec4 g_position;
 layout (location = 1) out vec4 g_albedo;
@@ -19,12 +19,6 @@ uniform sampler2D s_normal;
 uniform sampler2D s_roughness;
 uniform sampler2D s_metalness;
 uniform sampler2D s_ao;
-
-float linearize_depth(float depth)
-{
-    return (2.0f * near_plane * far_plane) / 
-    (far_plane + near_plane - (depth * 2.0f - 1.0f) * (far_plane - near_plane));
-}
 
 vec3 trans_normal(vec3 view_normal, vec3 uv_normal)
 {
@@ -49,8 +43,11 @@ vec2 normalize_frag_pos(vec4 pos)
 void main()
 {
     // g_position : position + depth
-    g_position.xyz = vout_view_pos;
-    g_position.w = linearize_depth(gl_FragCoord.z);//可选float linearDepth = -vout_view_pos.z;，待测试
+    float z = vout_view_pos.z;
+    z = (z-0.1)/(100.0-0.1);
+    g_position = vec4(z,z,z,1.0);
+    // g_position.xyz = vout_view_pos;
+    // g_position.w = -vout_view_pos.z;
     // g_albedo : albedo + roughness
     g_albedo.rgb = texture(s_albedo, vout_uv).rgb;
     g_albedo.a = texture(s_roughness, vout_uv).r;

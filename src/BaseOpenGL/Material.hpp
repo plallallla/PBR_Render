@@ -19,7 +19,7 @@ struct Material
         _ao = TEXTURE_MANAGER.auto_load_texture(std::string{dir} + "/ao.png");
     }
 
-    void active(GLenum offset)
+    void active(GLenum offset = 0)
     {
         glActiveTexture(GL_TEXTURE0 + offset);
         glBindTexture(GL_TEXTURE_2D, _albedo);

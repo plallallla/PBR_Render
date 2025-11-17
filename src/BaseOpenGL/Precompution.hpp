@@ -85,7 +85,7 @@ class ConvolutionIBLRender : public PrecomputedRender
     ShaderProgram _sp
     {
         SHADERS_PATH + "common_vertex/cube.vert", 
-        SHADERS_PATH + "pre_process/convolution.frag.frag"
+        SHADERS_PATH + "pre_process/convolution.frag"
     };        
 public:
     ConvolutionIBLRender(GLuint width = 64, GLuint height = 64) : PrecomputedRender{ width, height } {}
