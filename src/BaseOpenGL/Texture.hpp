@@ -188,7 +188,7 @@ public:
     // -Y (bottom)
     // +Z (front) 
     // -Z (back)
-    GLuint load_cube_texture(const std::vector<std::string_view>& path, const TextureAttributes& attributes = TEXTURE_CUBE_RGB)
+    GLuint load_cube_texture(const std::vector<std::string_view>& path, const TextureAttributes& attributes = TEXTURE_CUBE_RGB_FLOAT)
     {
         GLuint id;
         glGenTextures(1, &id);

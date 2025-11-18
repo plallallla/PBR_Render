@@ -11,8 +11,8 @@ in vec3 vout_normal;
 in vec4 vout_frag_position;
 in vec4 vout_frag_prev_position;
 
-const float near_plane = 1.0f;
-const float far_plane = 1000.0f;
+const float near_plane = 0.1;
+const float far_plane = 100.0;
 
 uniform sampler2D s_albedo;
 uniform sampler2D s_normal;
@@ -35,8 +35,8 @@ vec3 transform_normal()
         binormal = (dPdy * dUVdx.x - dPdx * dUVdy.x) / det;
         if (det < 0.0) binormal = -binormal;
     }
-    uv_normal.g = -uv_normal.g;//DX3D style
     vec3 uv_normal = normalize(texture(s_normal, vout_uv).rgb * 2.0f - 1.0f);
+    uv_normal.g = -uv_normal.g;//DX3D style
     vec3 normal = normalize(vout_normal);        
     mat3 TBN = mat3(normalize(tangent), normalize(binormal), normal);
     return normalize(TBN * uv_normal);
@@ -51,7 +51,8 @@ void main()
 {
     // g_position : position + depth
     g_position.xyz = vout_view_pos;
-    g_position.w = -vout_view_pos.z;
+    float z = -vout_view_pos.z;
+    g_position.w = (z - near_plane) / (far_plane - near_plane);
     // g_albedo : albedo + roughness
     g_albedo.rgb = texture(s_albedo, vout_uv).rgb;
     g_albedo.a = texture(s_roughness, vout_uv).r;

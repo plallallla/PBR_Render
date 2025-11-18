@@ -162,17 +162,6 @@ inline auto TEXTURE_2D_BRDF = []() -> TextureAttributes
     };
 }();
 
-inline auto TEXTURE_CUBE_RGBA = []() -> TextureAttributes {
-    return
-    {
-        GL_TEXTURE_CUBE_MAP,
-        {GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE}, // warp
-        {GL_LINEAR, GL_LINEAR}, // filter
-        {GL_RGBA16F, GL_RGBA, GL_FLOAT},
-        false
-    };
-}();
-
 inline auto TEXTURE_CUBE_DEPTH = []() -> TextureAttributes {
     return
     {
@@ -195,6 +184,17 @@ inline auto TEXTURE_CUBE_RGB_FLOAT = []() -> TextureAttributes {
     };
 }();
 
+inline auto TEXTURE_CUBE_RGBA_FLOAT = []() -> TextureAttributes {
+    return
+    {
+        GL_TEXTURE_CUBE_MAP,
+        {GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE}, // warp
+        {GL_LINEAR, GL_LINEAR}, // filter
+        {GL_RGBA16F, GL_RGBA, GL_FLOAT},
+        false
+    };
+}();
+
 inline auto TEXTURE_CUBE_PREFILTER = []() -> TextureAttributes {
     return
     {
@@ -203,16 +203,5 @@ inline auto TEXTURE_CUBE_PREFILTER = []() -> TextureAttributes {
         {GL_LINEAR, GL_LINEAR}, // filter
         {GL_RGB16F, GL_RGB, GL_FLOAT},
         true
-    };
-}();
-
-inline auto TEXTURE_CUBE_RGB = []() -> TextureAttributes {
-    return
-    {
-        GL_TEXTURE_CUBE_MAP,
-        {GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE}, // warp
-        {GL_LINEAR, GL_LINEAR}, // filter
-        {GL_RGB16F, GL_RGB, GL_UNSIGNED_BYTE},
-        false
     };
 }();

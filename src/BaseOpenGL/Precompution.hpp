@@ -63,7 +63,7 @@ public:
     EquirectConvertRender(GLuint width = 512, GLuint height = 512) : PrecomputedRender{ width, height } {}
     virtual void execute(GLuint hdr_texture) override
     {
-        _result = TEXTURE_MANAGER.generate_cube_texture_buffer(_width, _height, TEXTURE_CUBE_RGB);
+        _result = TEXTURE_MANAGER.generate_cube_texture_buffer(_width, _height, TEXTURE_CUBE_RGB_FLOAT);
         glViewport(0, 0, _width, _height);
         _sp.use();
         _sp.set_uniform("equirectangularMap", 0);
