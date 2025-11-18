@@ -82,6 +82,15 @@ TODO：补充渲染流程
 
 TODO：补充实现博客
 
+- 几何阶段
+  - 空间坐标系与变换矩阵
+  - 法线变换矩阵
+  - 切线与副切线
+- 着色阶段
+  - 微表面模型brdf
+  - IBL
+  - 光源的设计与实现
+
 ### 3.reference
 
 [前期预研学习项目](https://github.com/plallallla/CG_Demo)

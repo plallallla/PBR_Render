@@ -20,18 +20,25 @@ uniform sampler2D s_roughness;
 uniform sampler2D s_metalness;
 uniform sampler2D s_ao;
 
-vec3 trans_normal(vec3 view_normal, vec3 uv_normal)
+vec3 transform_normal()
 {
-    vec3 dPosX  = dFdx(vout_view_pos);
-    vec3 dPosY  = dFdy(vout_view_pos);
-    vec2 dTexX = dFdx(vout_uv);
-    vec2 dTexY = dFdy(vout_uv);
-
-    vec3 normal = normalize(view_normal);
-    vec3 tangent = normalize(dPosX * dTexY.t - dPosY * dTexX.t);
-    vec3 binormal = -normalize(cross(normal, tangent));
-    mat3 TBN = mat3(tangent, binormal, normal);
-
+    vec3 dPdx  = dFdx(vout_view_pos);
+    vec3 dPdy  = dFdy(vout_view_pos);
+    vec2 dUVdx = dFdx(vout_uv);
+    vec2 dUVdy = dFdy(vout_uv);
+    vec3 tangent = vec3(1, 0, 0); 
+    vec3 binormal = vec3(0, 1, 0);
+    float det = dUVdx.x * dUVdy.y - dUVdx.y * dUVdy.x;
+    if (abs(det) > 1e-6)
+    {
+        tangent = (dPdx * dUVdy.y - dPdy * dUVdx.y) / det;
+        binormal = (dPdy * dUVdx.x - dPdx * dUVdy.x) / det;
+        if (det < 0.0) binormal = -binormal;
+    }
+    uv_normal.g = -uv_normal.g;//DX3D style
+    vec3 uv_normal = normalize(texture(s_normal, vout_uv).rgb * 2.0f - 1.0f);
+    vec3 normal = normalize(vout_normal);        
+    mat3 TBN = mat3(normalize(tangent), normalize(binormal), normal);
     return normalize(TBN * uv_normal);
 }
 
@@ -43,18 +50,13 @@ vec2 normalize_frag_pos(vec4 pos)
 void main()
 {
     // g_position : position + depth
-    float z = vout_view_pos.z;
-    z = (z-0.1)/(100.0-0.1);
-    g_position = vec4(z,z,z,1.0);
-    // g_position.xyz = vout_view_pos;
-    // g_position.w = -vout_view_pos.z;
+    g_position.xyz = vout_view_pos;
+    g_position.w = -vout_view_pos.z;
     // g_albedo : albedo + roughness
     g_albedo.rgb = texture(s_albedo, vout_uv).rgb;
     g_albedo.a = texture(s_roughness, vout_uv).r;
     // g_normal : normal + metalness
-    vec3 uv_normal = normalize(texture(s_normal, vout_uv).rgb * 2.0f - 1.0f);
-    uv_normal.g = -uv_normal.g;//DX3D
-    g_normal.rgb = trans_normal(vout_normal, uv_normal);
+    g_normal.rgb = transform_normal();
     g_normal.a = texture(s_metalness, vout_uv).r;
     // g_effects : ao + motion vector
     g_effects.r = texture(s_ao, vout_uv).r;

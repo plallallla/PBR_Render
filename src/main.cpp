@@ -90,11 +90,12 @@ class PBR_render : public GLWidget
         gbuffer_sp.set_uniform("proj_view_model", proj_view_model);
         gbuffer_sp.set_uniform("prev_proj_view_model", prev_proj_view_model);
         prev_proj_view_model = proj_view_model;
-        Shape::render_sphere();//some render draw call
+        Shape::render_cube();//some render draw call
         gbuffer_fb.unbind();
         
         update_viewport();
         _debug.render_texture(gbtx_position);
+        // _debug.render_texture(gbtx_position);
 
         // _skybox.render_texture(equirect_pass, get_projection());
         // _skybox.render_texture(prefilter_pass, get_projection());
