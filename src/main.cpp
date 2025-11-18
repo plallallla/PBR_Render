@@ -115,8 +115,14 @@ class PBR_render : public GLWidget
         gbuffer_fb.unbind();
         // light
         update_viewport();
-        glDisable(GL_DEPTH_TEST);
+        // glDisable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        int scrWidth, scrHeight;
+        glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
+        glViewport(0, 0, scrWidth, scrHeight);          
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   
+        glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         light_sp.use();
         auto view_matrix = CAMERA.get_view_matrix();
         light_sp.set_uniform("inverse_view", glm::inverse(view_matrix));

@@ -108,22 +108,17 @@ void main()
     vec3 normal = texture(s_normal, uv).xyz;
     float metalness = texture(s_normal, uv).a;
     float ao = texture(s_effects, uv).r;
-
-
-    out_frag_color = vec4(view_pos, 1.0);
-    return;
-
     // direct light
     vec3 Lo = vec3(0.0);
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metalness);    
-    vec3 V = normalize(-view_pos);
+    vec3 V = normalize(view_pos);
     vec3 N = normalize(normal);
     // direction light
     vec3 L = normalize(view_matrix3 * (-d_light.direction));
     vec3 radiance = d_light.color;
     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metalness);
-    out_frag_color = vec4(Lo, 1.0);
+    vec3 final_color = Lo;
     // // point light
     // for (int i = 0; i < 4; i++)
     // {
@@ -153,11 +148,11 @@ void main()
     // // mix
     // vec3 ambient = (diffuse + specular) * ao;
     // // final render equation
-    // vec3 final_color = ambient + Lo;
-    // // HDR tonemapping
-    // final_color = final_color / (final_color + vec3(1.0));
-    // // gamma correct
-    // final_color = pow(final_color, vec3(1.0/2.2)); 
-    // // out
-    // out_frag_color = vec4(final_color , 1.0);
+    // final_color = ambient + Lo;
+    // HDR tonemapping
+    final_color = final_color / (final_color + vec3(1.0));
+    // gamma correct
+    final_color = pow(final_color, vec3(1.0/2.2)); 
+    // out
+    out_frag_color = vec4(final_color , 1.0);
 }
