@@ -1,50 +1,15 @@
 #version 400 core
-out vec4 FragColor;
-in vec2 TexCoords;
-in vec3 WorldPos;
-in vec3 Normal;
 
-// material parameters
-uniform sampler2D albedoMap;
-uniform sampler2D normalMap;
-uniform sampler2D metallicMap;
-uniform sampler2D roughnessMap;
-uniform sampler2D aoMap;
+out vec4 out_frag_color;
 
-// IBL
-uniform samplerCube irradianceMap;
-uniform samplerCube prefilterMap;
-uniform sampler2D brdfLUT;
+in vec2 vout_uv;
+in vec3 vout_world_pos;
+in vec3 vout_world_normal;
 
-// lights
-struct DirectionLight
-{
-    vec3 direction;
-    vec3 color;
-};
-uniform DirectionLight d_light;
+uniform vec3 eye_position;
 
-uniform vec3 camPos;
-
-const float MAX_REFLECTION_LOD = 4.0;
 const float PI = 3.14159265359;
-
-vec3 getNormalFromMap()
-{
-    vec3 tangentNormal = texture(normalMap, TexCoords).xyz * 2.0 - 1.0;
-
-    vec3 Q1  = dFdx(WorldPos);
-    vec3 Q2  = dFdy(WorldPos);
-    vec2 st1 = dFdx(TexCoords);
-    vec2 st2 = dFdy(TexCoords);
-
-    vec3 N   = normalize(Normal);
-    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
-    vec3 B  = -normalize(cross(N, T));
-    mat3 TBN = mat3(T, B, N);
-
-    return normalize(TBN * tangentNormal);
-}
+const float MAX_REFLECTION_LOD = 4.0;
 
 float DistributionGGX(float NdotH, float roughness)
 {
@@ -103,28 +68,28 @@ vec3 direct_irradiance(vec3 radiance, vec3 albedo, vec3 V, vec3 N, vec3 L, vec3 
     return (diffuse + specular) * radiance * NdotL;
 }
 
+struct DirectionLight
+{
+    vec3 direction;
+    vec3 color;
+};
+uniform DirectionLight d_light;
 
 void main()
-{		
-    // material properties
-    // vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
-    // float metallic = texture(metallicMap, TexCoords).r;
-    // float roughness = texture(roughnessMap, TexCoords).r;
+{
+    // read gbuffer
+    
+    vec3 world_space_position = vout_world_pos;
     vec3 albedo = vec3(1.0,1.0,0.0);
     float metallic = 0.5;
     float roughness = 0.5;
     float ao = 0.5;
     // input lighting data
-    // vec3 N = getNormalFromMap();
-    vec3 N = normalize(Normal);
-    FragColor = vec4(N , 1.0);return;
-
-
-    vec3 V = normalize(camPos - WorldPos);
+    vec3 N = normalize(vout_world_normal);
+    vec3 V = normalize(eye_position - world_space_position);
     vec3 R = reflect(-V, N); 
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
-    // reflectance equation
     vec3 Lo = vec3(0.0);
     vec3 L = normalize(d_light.direction);
     vec3 H = normalize(V + L);
@@ -133,5 +98,6 @@ void main()
     vec3 color = Lo;
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2)); 
-    FragColor = vec4(color , 1.0);
+    out_frag_color = vec4(color , 1.0);    
+    return;
 }

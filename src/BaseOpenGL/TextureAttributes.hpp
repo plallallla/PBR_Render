@@ -48,7 +48,7 @@ inline auto TEXTURE_2D_RGBA16F = [] () -> TextureAttributes
     {
         GL_TEXTURE_2D,
         {GL_REPEAT, GL_REPEAT}, // warp
-        {GL_LINEAR, GL_LINEAR}, // filter
+        {GL_NEAREST, GL_NEAREST}, // filter
         {GL_RGBA16F, GL_RGBA, GL_FLOAT}, 
         true
     };

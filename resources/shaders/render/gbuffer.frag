@@ -31,7 +31,8 @@ vec3 getNormalFromMap()
     vec3 T = normalize(Q1*st2.t - Q2*st1.t);
     vec3 B = -normalize(cross(N, T));
     mat3 TBN = mat3(T, B, N);
-    return normalize(TBN * tangentNormal);
+    return N;
+    // return normalize(TBN * tangentNormal);
 }
 vec2 normalize_frag_pos(vec4 pos)
 {

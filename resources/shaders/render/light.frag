@@ -99,12 +99,20 @@ void main()
         out_frag_color = texture(env_cube, cube_uv);
         return;
     }
+    
     vec3 world_space_position = texture(s_position, uv).rgb;
-    vec3 albedo = pow(texture(s_albedo, uv).rgb, vec3(2.2));
-    float roughness = texture(s_albedo, uv).a;
     vec3 normal = texture(s_normal, uv).xyz;
-    float metallic = texture(s_normal, uv).a;
-    float ao = texture(s_effects, uv).r;
+    // vec3 normal = vec3(0.0,1.0,0.0);
+
+    // vec3 albedo = pow(texture(s_albedo, uv).rgb, vec3(2.2));
+    // float roughness = texture(s_albedo, uv).a;
+    // float metallic = texture(s_normal, uv).a;
+    // float ao = texture(s_effects, uv).r;
+
+    vec3 albedo = vec3(1.0,1.0,0.0);
+    float metallic = 0.5;
+    float roughness = 0.5;
+    float ao = 0.5;
 
     // input lighting data
     vec3 N = normalize(normal);
@@ -112,72 +120,14 @@ void main()
     vec3 R = reflect(-V, N); 
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
-    // reflectance equation
     vec3 Lo = vec3(0.0);
     vec3 L = normalize(d_light.direction);
     vec3 H = normalize(V + L);
     vec3 radiance = d_light.color;
     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);    
-    vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
-    vec3 kS = F;
-    vec3 kD = 1.0 - kS;
-    kD *= 1.0 - metallic;	  
-    vec3 irradiance = texture(ibl_convolution, N).rgb;
-    vec3 diffuse = irradiance * albedo;
-    vec3 prefilteredColor = textureLod(ibl_prefilter, R,  roughness * MAX_REFLECTION_LOD).rgb;    
-    vec2 brdf  = texture(ibl_brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
-    vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
-    vec3 ambient = (kD * diffuse + specular) * ao;
-    vec3 color = ambient + Lo;
+    vec3 color = Lo;
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2)); 
     out_frag_color = vec4(color , 1.0);    
     return;
-
-    // // direct light
-    // vec3 Lo = vec3(0.0);
-    // vec3 F0 = vec3(0.04); 
-    // F0 = mix(F0, albedo, metalness);    
-    // vec3 V = normalize(eye_position - world_space_position);
-    // vec3 N = normalize(normal);
-    // // direction light
-    // vec3 L = normalize(d_light.direction);
-    // vec3 radiance = d_light.color;
-    // Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metalness);
-    // vec3 final_color = Lo;
-    // // // point light
-    // // for (int i = 0; i < 4; i++)
-    // // {
-    // //     vec4 light_pos = view_matrix4 * vec4(p_light[i].position, 1.0);
-    // //     L = normalize(light_pos.xyz - view_pos);
-    // //     float d = length(light_pos.xyz - view_pos);
-    // //     float attenuation = 1 / (d * d);
-    // //     radiance = attenuation * p_light[i].color;
-    // //     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metalness);
-    // // }
-    // // IBL
-    // float NdotV = max(dot(N, V), 0.0);
-    // vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
-    // vec3 kS = F;
-    // vec3 kD = 1.0 - kS;
-    // kD *= 1.0 - metalness;
-    // // diffuse
-    // vec3 irradiance = texture(ibl_convolution, N).rgb;
-    // vec3 diffuse = kD * irradiance * albedo;
-    // // specular
-    // vec3 R = reflect(-V, N);
-    // vec3 prefilteredColor = textureLod(ibl_prefilter, R,  roughness * MAX_REFLECTION_LOD).rgb;    
-    // vec2 brdf = texture(ibl_brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
-    // vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
-    // // mix
-    // vec3 ambient = (diffuse + specular) * ao;
-    // // final render equation
-    // // final_color = ambient + Lo;先不考虑IBL
-    // final_color = Lo;
-    // // HDR tonemapping
-    // final_color = final_color / (final_color + vec3(1.0));
-    // // gamma correct
-    // final_color = pow(final_color, vec3(1.0/2.2)); 
-    // // out
-    // out_frag_color = vec4(final_color , 1.0);
 }

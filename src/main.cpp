@@ -61,7 +61,15 @@ class PBR_render : public GLWidget
     {
         SHADERS_PATH + "render/pbr.vs",
         SHADERS_PATH + "render/pbr.fs" 
-    };    
+    };  
+    
+    ShaderProgram merge_sp
+    {
+        SHADERS_PATH + "render/merge.vert",
+        SHADERS_PATH + "render/merge.frag" 
+    }; 
+    
+ 
 
     // gbuffer资源
     FrameBuffer gbuffer_fb;
@@ -78,6 +86,23 @@ class PBR_render : public GLWidget
     };    
 
     PostRender _debug;
+
+    ShaderProgram _debug_gbuffer_sp
+    {
+        SHADERS_PATH + "deffered/gbuffer.vert",
+        SHADERS_PATH + "deffered/gbuffer.frag" 
+    };    
+    
+    ShaderProgram _debug_light_sp
+    {
+        SHADERS_PATH + "common_vertex/quad.vert",
+        SHADERS_PATH + "deffered/light.frag" 
+    };       
+
+    FrameBuffer d_fb;
+    GLuint d_position;
+    GLuint d_normal;
+
 
     virtual void application() override
     {
@@ -106,12 +131,24 @@ class PBR_render : public GLWidget
         gbuffer_fb.checkFramebufferStatus();
         gbuffer_fb.unbind();
 
+        d_fb.bind();
+        gbuffer_fb.create_render_object(scrWidth, scrHeight);
+        d_position = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
+        gbuffer_fb.attach_color_texture(0, d_position);
+        d_normal = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
+        gbuffer_fb.attach_color_texture(1, d_normal);
+        gbuffer_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
+        d_fb.unbind();
+
+        _debug_light_sp.use();
+        _debug_light_sp.set_sampler(0, "s_position");
+        _debug_light_sp.set_sampler(1, "s_normal");
+        _debug_light_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
+        _debug_light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
+        _debug_light_sp.set_uniform("projection", get_projection());          
+
+
         // gbuffer
-// s_albedo;
-// s_normal;
-// s_roughness;
-// s_metalness;
-// s_ao;
         gbuffer_sp.use();
         Material::set_samplers(gbuffer_sp, 0);
         // gbuffer_sp.set_sampler(0, "s_albedo");
@@ -148,10 +185,59 @@ class PBR_render : public GLWidget
 
         pbrShader.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
         pbrShader.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
-
         pbrShader.set_uniform("projection", get_projection());
 
+        merge_sp.use();
+        merge_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
+        merge_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
+        merge_sp.set_uniform("projection", get_projection());        
 
+
+    }
+
+    void debug_defferd()
+    {
+        d_fb.bind();
+        update_viewport();
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        _debug_gbuffer_sp.use();
+        glm::mat4 model = glm::mat4(1.0f);
+        _debug_gbuffer_sp.set_uniform("model", model);
+        _debug_gbuffer_sp.set_uniform("normal_matrix", glm::transpose(glm::inverse(glm::mat3(model))));
+        _debug_gbuffer_sp.set_uniform("proj_view_model", get_projection() * CAMERA.get_view_matrix() * model);
+        Shape::render_sphere();
+        d_fb.unbind();
+
+        update_viewport();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);       
+        glDepthMask(GL_FALSE); 
+        _debug_light_sp.use();
+        _debug_light_sp.active_sampler(0, d_position);
+        _debug_light_sp.active_sampler(1, d_normal);
+        _debug_light_sp.set_uniform("eye_position", CAMERA.get_position());
+        VertexArray::render_empty_va();        
+    }
+
+    void merge_render()
+    {
+        update_viewport();
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);           
+        merge_sp.use();
+        glm::mat4 model = glm::mat4(1.0f);
+        merge_sp.set_uniform("model", model);
+        merge_sp.set_uniform("normal_matrix", glm::transpose(glm::inverse(glm::mat3(model))));
+        merge_sp.set_uniform("proj_view_model", get_projection() * CAMERA.get_view_matrix() * model);
+        merge_sp.set_uniform("eye_position", CAMERA.get_position());
+        Shape::render_sphere();        
     }
 
     void direct_render()
@@ -243,11 +329,14 @@ class PBR_render : public GLWidget
     virtual void render_loop() override
     {
 
-        direct_render();
-
-        // deffered_render();
+        // direct_render();
 
 
+        // merge_render();
+
+        // debug_defferd();
+
+        deffered_render();
 
         // // ready for forward render
         // int scrWidth, scrHeight;
