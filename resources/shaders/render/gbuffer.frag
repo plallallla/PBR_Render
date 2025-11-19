@@ -5,9 +5,9 @@ layout (location = 1) out vec4 g_albedo;
 layout (location = 2) out vec4 g_normal;
 layout (location = 3) out vec3 g_effects;
 
-in vec3 vout_view_pos;
 in vec2 vout_uv;
-in vec3 vout_normal;
+in vec3 vout_world_pos;
+in vec3 vout_world_normal;
 in vec4 vout_frag_position;
 in vec4 vout_frag_prev_position;
 
@@ -17,31 +17,22 @@ const float far_plane = 100.0;
 uniform sampler2D s_albedo;
 uniform sampler2D s_normal;
 uniform sampler2D s_roughness;
-uniform sampler2D s_metalness;
+uniform sampler2D s_metallic;
 uniform sampler2D s_ao;
 
-vec3 transform_normal()
+vec3 getNormalFromMap()
 {
-    vec3 dPdx = dFdx(vout_view_pos);
-    vec3 dPdy = dFdy(vout_view_pos);
-    vec2 dUVdx = dFdx(vout_uv);
-    vec2 dUVdy = dFdy(vout_uv);
-    vec3 tangent = vec3(1, 0, 0); 
-    vec3 binormal = vec3(0, 1, 0);
-    float det = dUVdx.x * dUVdy.y - dUVdx.y * dUVdy.x;
-    if (abs(det) > 1e-6)
-    {
-        tangent = (dPdx * dUVdy.y - dPdy * dUVdx.y) / det;
-        binormal = (dPdy * dUVdx.x - dPdx * dUVdy.x) / det;
-        if (det < 0.0) binormal = -binormal;
-    }
-    vec3 uv_normal = normalize(texture(s_normal, vout_uv).rgb * 2.0f - 1.0f);
-    uv_normal.g = -uv_normal.g;//DX3D style
-    vec3 normal = normalize(vout_normal);        
-    mat3 TBN = mat3(normalize(tangent), normalize(binormal), normal);
-    return normalize(TBN * uv_normal);
+    vec3 tangentNormal = texture(s_normal, vout_uv).xyz * 2.0 - 1.0;
+    vec3 Q1  = dFdx(vout_world_pos);
+    vec3 Q2  = dFdy(vout_world_pos);
+    vec2 st1 = dFdx(vout_uv);
+    vec2 st2 = dFdy(vout_uv);
+    vec3 N = normalize(vout_world_normal);
+    vec3 T = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
+    return normalize(TBN * tangentNormal);
 }
-
 vec2 normalize_frag_pos(vec4 pos)
 {
     return pos.xy / pos.w * 0.5 + 0.5;
@@ -50,15 +41,14 @@ vec2 normalize_frag_pos(vec4 pos)
 void main()
 {
     // g_position : position + depth
-    g_position.xyz = vout_view_pos;
-    float z = -vout_view_pos.z;
-    g_position.w = (z - near_plane) / (far_plane - near_plane);
+    g_position.xyz = vout_world_pos;
+    g_position.w = gl_FragCoord.z;
     // g_albedo : albedo + roughness
     g_albedo.rgb = texture(s_albedo, vout_uv).rgb;
     g_albedo.a = texture(s_roughness, vout_uv).r;
-    // g_normal : normal + metalness
-    g_normal.rgb = transform_normal();
-    g_normal.a = texture(s_metalness, vout_uv).r;
+    // g_normal : normal + metalic
+    g_normal.rgb = getNormalFromMap();
+    g_normal.a = texture(s_metallic, vout_uv).r;
     // g_effects : ao + motion vector
     g_effects.r = texture(s_ao, vout_uv).r;
     g_effects.gb = normalize_frag_pos(vout_frag_position) - normalize_frag_pos(vout_frag_prev_position);

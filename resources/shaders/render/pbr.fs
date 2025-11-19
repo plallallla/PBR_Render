@@ -117,37 +117,12 @@ void main()
     vec3 R = reflect(-V, N); 
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
-
-    FragColor = vec4(N , 1.0);
-    return;
-
-
     // reflectance equation
     vec3 Lo = vec3(0.0);
-
-
-
     vec3 L = normalize(d_light.direction);
     vec3 H = normalize(V + L);
-    // float distance = length(d_light.position - WorldPos);
-    // float attenuation = 1.0 / (distance * distance);
-    // vec3 radiance = d_light.color * attenuation;
     vec3 radiance = d_light.color;
     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);    
-    // for(int i = 0; i < 4; ++i) 
-    // {
-        // float NDF = DistributionGGX(N, H, roughness);   
-        // float G   = GeometrySmith(N, V, L, roughness);    
-        // vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);        
-        // vec3 numerator    = NDF * G * F;
-        // float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-        // vec3 specular = numerator / denominator;
-        // vec3 kS = F;
-        // vec3 kD = vec3(1.0) - kS;
-        // kD *= 1.0 - metallic;	                
-        // float NdotL = max(dot(N, L), 0.0);        
-        // Lo += (kD * albedo / PI + specular) * radiance * NdotL;
-    // }   
     vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
     vec3 kS = F;
     vec3 kD = 1.0 - kS;
