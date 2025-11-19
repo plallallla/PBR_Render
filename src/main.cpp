@@ -18,11 +18,27 @@
 #include <glm/matrix.hpp>
 
 
+    std::vector<glm::vec3> lightPositions
+    {
+        glm::vec3(-10.0f,  10.0f, 10.0f),
+        glm::vec3( 10.0f,  10.0f, 10.0f),
+        glm::vec3(-10.0f, -10.0f, 10.0f),
+        glm::vec3( 10.0f, -10.0f, 10.0f),
+    };
+    std::vector<glm::vec3> lightColors
+    {
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f)
+    };
+
+
 
 class PBR_render : public GLWidget
 {
 
-    Material rusted_iron{TEXTURE_PATH + "pbr/grass"};
+    Material rusted_iron{TEXTURE_PATH + "pbr/rusted_iron"};
 
     // 天空盒渲染pass
     GLuint _input_hdr = TEXTURE_MANAGER.load_hdr_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
@@ -40,6 +56,12 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "render/light.vert",
         SHADERS_PATH + "render/light.frag" 
     };
+
+    ShaderProgram pbrShader
+    {
+        SHADERS_PATH + "render/pbr.vs",
+        SHADERS_PATH + "render/pbr.fs" 
+    };    
 
     // gbuffer资源
     FrameBuffer gbuffer_fb;
@@ -59,6 +81,8 @@ class PBR_render : public GLWidget
 
     virtual void application() override
     {
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
         CAMERA.set_position({0.0, 0.0, 2.0});
         // budf_lut.execute();
         // equirect_pass.execute(_input_hdr);
@@ -97,55 +121,117 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(6, "ibl_brdf_lut");
         light_sp.set_sampler(7, "env_cube");     
         
-        light_sp.set_uniform("d_light.color", glm::vec3(1.0, 1.0, 1.0));
+        light_sp.set_uniform("d_light.color", glm::vec3(100.0, 100.0, 100.0));
         light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
+
+        // pbr
+        pbrShader.use();
+        pbrShader.set_uniform<int>("irradianceMap", 0);
+        pbrShader.set_uniform<int>("prefilterMap", 1);
+        pbrShader.set_uniform<int>("brdfLUT", 2);
+        pbrShader.set_uniform<int>("albedoMap", 3);
+        pbrShader.set_uniform<int>("normalMap", 4);
+        pbrShader.set_uniform<int>("metallicMap", 5);
+        pbrShader.set_uniform<int>("roughnessMap", 6);
+        pbrShader.set_uniform<int>("aoMap", 7);        
+
+        pbrShader.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
+        pbrShader.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
+
+        pbrShader.set_uniform("projection", get_projection());
+
 
     }
 
     virtual void render_loop() override
     {
-        // gbuffer
-        gbuffer_fb.bind();
-        gbuffer_sp.use();
-        glDepthMask(GL_TRUE);
         glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);        
+        pbrShader.use();
+        glm::mat4 model = glm::mat4(1.0f);
+        pbrShader.set_uniform("view", CAMERA.get_view_matrix());
+        pbrShader.set_uniform("camPos", CAMERA.get_position());
+        pbrShader.set_uniform("model", model);
+        pbrShader.set_uniform("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+        // bind pre-computed IBL data
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, convolution_pass);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, prefilter_pass);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, budf_lut); 
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, rusted_iron._albedo);
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, rusted_iron._normal);
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, rusted_iron._metallic);
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, rusted_iron._roughness);
+        glActiveTexture(GL_TEXTURE7);
+        glBindTexture(GL_TEXTURE_2D, rusted_iron._ao);   
+        Shape::render_sphere();
+        for (unsigned int i = 0; i < 4; ++i)
+        {
+            glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
+            newPos = lightPositions[i];
+            pbrShader.set_uniform("lightPositions[" + std::to_string(i) + "]", newPos);
+            pbrShader.set_uniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, newPos);
+            model = glm::scale(model, glm::vec3(0.5f));
+            pbrShader.set_uniform("model", model);
+            pbrShader.set_uniform("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+            Shape::render_sphere();
+        }
+
+
+
+
+        // // gbuffer
+        // gbuffer_fb.bind();
+        // gbuffer_sp.use();
+        // glEnable(GL_DEPTH_TEST);
+        // glDepthMask(GL_TRUE);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // glEnable(GL_CULL_FACE);
         // glCullFace(GL_BACK);
-        glm::mat4 model(1.0);
-        glm::mat4 view_model = CAMERA.get_view_matrix() * model;
-        glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(view_model)));
-        glm::mat4 proj_view_model = get_projection() * view_model;
-        gbuffer_sp.set_uniform("view_model", view_model);
-        gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
-        gbuffer_sp.set_uniform("proj_view_model", proj_view_model);
-        gbuffer_sp.set_uniform("prev_proj_view_model", prev_proj_view_model);
-        prev_proj_view_model = proj_view_model;
-        rusted_iron.active(0);
-        Shape::render_cube();//some render draw call
-        gbuffer_fb.unbind();
-        // light
-        update_viewport();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);       
-        glDepthMask(GL_FALSE);          
-        light_sp.use();
-        auto view_matrix = CAMERA.get_view_matrix();
-        light_sp.set_uniform("inverse_view", glm::inverse(view_matrix));
-        light_sp.set_uniform("inverse_projection", glm::inverse(get_projection()));
-        light_sp.set_uniform("view_pos", CAMERA.get_position());
-        light_sp.set_uniform("view_matrix3", glm::mat3(view_matrix));
-        light_sp.set_uniform("view_matrix4", view_matrix);
-        light_sp.set_uniform("inv_view_matrix3", glm::inverse(glm::mat3(view_matrix)));
-        light_sp.active_sampler(0, gbtx_position);
-        light_sp.active_sampler(1, gbtx_albdeo);
-        light_sp.active_sampler(2, gbtx_normal);
-        light_sp.active_sampler(3, gbtx_effects);
-        light_sp.active_sampler(4, convolution_pass);
-        light_sp.active_sampler(5, prefilter_pass);
-        light_sp.active_sampler(6, budf_lut);
-        light_sp.active_sampler(7, equirect_pass);
-        VertexArray::render_empty_va();
+        // // glm::mat4 model(1.0);
+        // glm::mat4 view_model = CAMERA.get_view_matrix() * model;
+        // glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(view_model)));
+        // glm::mat4 proj_view_model = get_projection() * view_model;
+        // gbuffer_sp.set_uniform("view_model", view_model);
+        // gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
+        // gbuffer_sp.set_uniform("proj_view_model", proj_view_model);
+        // gbuffer_sp.set_uniform("prev_proj_view_model", prev_proj_view_model);
+        // prev_proj_view_model = proj_view_model;
+        // rusted_iron.active(0);
+        // Shape::render_sphere();//some render draw call
+        // gbuffer_fb.unbind();
+        // // light
+        // update_viewport();
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // glDisable(GL_DEPTH_TEST);       
+        // glDepthMask(GL_FALSE);          
+        // light_sp.use();
+        // auto view_matrix = CAMERA.get_view_matrix();
+        // light_sp.set_uniform("inverse_view", glm::inverse(view_matrix));
+        // light_sp.set_uniform("inverse_projection", glm::inverse(get_projection()));
+        // light_sp.set_uniform("view_matrix3", glm::mat3(view_matrix));
+        // light_sp.set_uniform("view_matrix4", view_matrix);
+        // light_sp.set_uniform("inv_view_matrix3", glm::inverse(glm::mat3(view_matrix)));
+        // light_sp.active_sampler(0, gbtx_position);
+        // light_sp.active_sampler(1, gbtx_albdeo);
+        // light_sp.active_sampler(2, gbtx_normal);
+        // light_sp.active_sampler(3, gbtx_effects);
+        // light_sp.active_sampler(4, convolution_pass);
+        // light_sp.active_sampler(5, prefilter_pass);
+        // light_sp.active_sampler(6, budf_lut);
+        // light_sp.active_sampler(7, equirect_pass);
+        // VertexArray::render_empty_va();
 
         // // ready for forward render
         // int scrWidth, scrHeight;

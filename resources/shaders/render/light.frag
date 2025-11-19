@@ -14,7 +14,6 @@ uniform samplerCube ibl_prefilter;
 uniform sampler2D ibl_brdf_lut;
 uniform samplerCube env_cube;
 
-uniform vec3 view_pos;
 uniform mat3 view_matrix3;
 uniform mat3 inv_view_matrix3;
 uniform mat4 view_matrix4;
@@ -102,9 +101,7 @@ void main()
         out_frag_color = texture(env_cube, cube_uv);
         return;
     }
-    // out_frag_color = vec4(depth,depth,depth,1.0);
-    // return;
-    vec3 view_pos = texture(s_position, uv).rgb;
+    vec3 view_space_position = texture(s_position, uv).rgb;
     vec3 albedo = pow(texture(s_albedo, uv).rgb, vec3(2.2));
     float roughness = texture(s_albedo, uv).a;
     vec3 normal = texture(s_normal, uv).xyz;
@@ -114,7 +111,7 @@ void main()
     vec3 Lo = vec3(0.0);
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metalness);    
-    vec3 V = normalize(view_pos);
+    vec3 V = normalize(-view_space_position);
     vec3 N = normalize(normal);
     // direction light
     vec3 L = normalize(view_matrix3 * (-d_light.direction));
