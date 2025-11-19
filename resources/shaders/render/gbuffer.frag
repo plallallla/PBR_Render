@@ -22,8 +22,8 @@ uniform sampler2D s_ao;
 
 vec3 transform_normal()
 {
-    vec3 dPdx  = dFdx(vout_view_pos);
-    vec3 dPdy  = dFdy(vout_view_pos);
+    vec3 dPdx = dFdx(vout_view_pos);
+    vec3 dPdy = dFdy(vout_view_pos);
     vec2 dUVdx = dFdx(vout_uv);
     vec2 dUVdy = dFdy(vout_uv);
     vec3 tangent = vec3(1, 0, 0); 

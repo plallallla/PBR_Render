@@ -77,7 +77,7 @@ public:
         _va.bind();
         glDrawArrays(GL_TRIANGLES, 0, 36);    
         glDepthFunc(GL_LESS);
-        glDepthMask(GL_TRUE);        
+        glDepthMask(GL_TRUE);      
     }
 };
 

@@ -96,12 +96,14 @@ uniform PointLight p_light[4];
 void main()
 {
     // read gbuffer
-    float depth = texture(s_position, uv).a;
+    float depth = texture(s_position, uv).w;
     if (depth >= 0.99999) 
     {
         out_frag_color = texture(env_cube, cube_uv);
         return;
     }
+    // out_frag_color = vec4(depth,depth,depth,1.0);
+    // return;
     vec3 view_pos = texture(s_position, uv).rgb;
     vec3 albedo = pow(texture(s_albedo, uv).rgb, vec3(2.2));
     float roughness = texture(s_albedo, uv).a;
@@ -129,26 +131,26 @@ void main()
     //     radiance = attenuation * p_light[i].color;
     //     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metalness);
     // }
-    // // IBL
-    // float NdotV = max(dot(N, V), 0.0);
-    // vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
-    // vec3 kS = F;
-    // vec3 kD = 1.0 - kS;
-    // kD *= 1.0 - metalness;
-    // vec3 N_world = inv_view_matrix3 * N;
-    // vec3 V_world = inv_view_matrix3 * V;
-    // // diffuse
-    // vec3 irradiance = texture(ibl_convolution, N_world).rgb;
-    // vec3 diffuse = kD * irradiance * albedo;
-    // // specular
-    // vec3 R = reflect(-V_world, N_world);
-    // vec3 prefilteredColor = textureLod(ibl_prefilter, R,  roughness * MAX_REFLECTION_LOD).rgb;    
-    // vec2 brdf = texture(ibl_brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
-    // vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
-    // // mix
-    // vec3 ambient = (diffuse + specular) * ao;
-    // // final render equation
-    // final_color = ambient + Lo;
+    // IBL
+    float NdotV = max(dot(N, V), 0.0);
+    vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+    vec3 kS = F;
+    vec3 kD = 1.0 - kS;
+    kD *= 1.0 - metalness;
+    vec3 N_world = inv_view_matrix3 * N;
+    vec3 V_world = inv_view_matrix3 * V;
+    // diffuse
+    vec3 irradiance = texture(ibl_convolution, N_world).rgb;
+    vec3 diffuse = kD * irradiance * albedo;
+    // specular
+    vec3 R = reflect(-V_world, N_world);
+    vec3 prefilteredColor = textureLod(ibl_prefilter, R,  roughness * MAX_REFLECTION_LOD).rgb;    
+    vec2 brdf = texture(ibl_brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+    // mix
+    vec3 ambient = (diffuse + specular) * ao;
+    // final render equation
+    final_color = ambient + Lo;
     // HDR tonemapping
     final_color = final_color / (final_color + vec3(1.0));
     // gamma correct

@@ -11,6 +11,7 @@
 
 #include "PostRender.hpp"
 #include "Texture.hpp"
+#include "TextureAttributes.hpp"
 #include "VertexArray.hpp"
 #include "utility.hpp"
 #include <glm/fwd.hpp>
@@ -42,6 +43,7 @@ class PBR_render : public GLWidget
 
     // gbuffer资源
     FrameBuffer gbuffer_fb;
+    GLuint depth_texture;
     GLuint gbtx_position;
     GLuint gbtx_albdeo;
     GLuint gbtx_normal;
@@ -51,34 +53,40 @@ class PBR_render : public GLWidget
     {
         SHADERS_PATH + "render/gbuffer.vert",
         SHADERS_PATH + "render/gbuffer.frag" 
-    };  
+    };    
 
     PostRender _debug;
 
     virtual void application() override
     {
-        CAMERA.set_position({0.0, 0.0, 1.0});
-        budf_lut.execute();
-        equirect_pass.execute(_input_hdr);
-        convolution_pass.execute(equirect_pass);
-        prefilter_pass.execute(equirect_pass);
+        CAMERA.set_position({0.0, 0.0, 2.0});
+        // budf_lut.execute();
+        // equirect_pass.execute(_input_hdr);
+        // convolution_pass.execute(equirect_pass);
+        // prefilter_pass.execute(equirect_pass);
 
         int scrWidth, scrHeight;
         glfwGetFramebufferSize(window, &scrWidth, &scrHeight);        
         // gbuffer set
         gbuffer_fb.bind();
         gbuffer_fb.create_render_object(scrWidth, scrHeight);
+        // depth_texture = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_DEPTH);
+        // gbuffer_fb.attach_depth_texture(depth_texture);       
         gbtx_position = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
-        gbtx_albdeo = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA);
-        gbtx_normal = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
-        gbtx_effects = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGB16F);
         gbuffer_fb.attach_color_texture(0, gbtx_position);
+        gbtx_albdeo = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA);
         gbuffer_fb.attach_color_texture(1, gbtx_albdeo);
+        gbtx_normal = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
         gbuffer_fb.attach_color_texture(2, gbtx_normal);
+        gbtx_effects = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGB16F);
         gbuffer_fb.attach_color_texture(3, gbtx_effects);
+
         gbuffer_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3});
+        gbuffer_fb.checkFramebufferStatus();
+
         gbuffer_fb.unbind();
-        // light sampler
+             
+        // light
         light_sp.use();
         light_sp.set_sampler(0, "s_position");
         light_sp.set_sampler(1, "s_albedo");
@@ -99,30 +107,28 @@ class PBR_render : public GLWidget
         // gbuffer
         gbuffer_fb.bind();
         gbuffer_sp.use();
-        rusted_iron.active(0);
+        glDepthMask(GL_TRUE);
         glEnable(GL_DEPTH_TEST);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);        
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // glEnable(GL_CULL_FACE);
+        // glCullFace(GL_BACK);
         glm::mat4 model(1.0);
         glm::mat4 view_model = CAMERA.get_view_matrix() * model;
         glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(view_model)));
-        glm::mat4 proj_view_model = get_projection() * CAMERA.get_view_matrix() * model;
+        glm::mat4 proj_view_model = get_projection() * view_model;
         gbuffer_sp.set_uniform("view_model", view_model);
         gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
         gbuffer_sp.set_uniform("proj_view_model", proj_view_model);
         gbuffer_sp.set_uniform("prev_proj_view_model", prev_proj_view_model);
         prev_proj_view_model = proj_view_model;
+        rusted_iron.active(0);
         Shape::render_cube();//some render draw call
         gbuffer_fb.unbind();
         // light
         update_viewport();
-        // glDisable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        int scrWidth, scrHeight;
-        glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
-        glViewport(0, 0, scrWidth, scrHeight);          
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   
-        glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glDisable(GL_DEPTH_TEST);       
+        glDepthMask(GL_FALSE);          
         light_sp.use();
         auto view_matrix = CAMERA.get_view_matrix();
         light_sp.set_uniform("inverse_view", glm::inverse(view_matrix));
@@ -141,7 +147,15 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(7, equirect_pass);
         VertexArray::render_empty_va();
 
-        // _debug.render_texture(gbtx_position);
+        // // ready for forward render
+        // int scrWidth, scrHeight;
+        // glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
+        // glViewport(0, 0, scrWidth, scrHeight);          
+        // glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
+        // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   
+        // glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);        
+
+        // _debug.render_texture(depth_texture);
         // _debug.render_texture(gbtx_position);
 
         // _skybox.render_texture(equirect_pass, get_projection());
