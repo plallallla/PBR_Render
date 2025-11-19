@@ -169,7 +169,7 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(6, "ibl_brdf_lut");
         light_sp.set_sampler(7, "env_cube");     
         
-        light_sp.set_uniform("d_light.color", glm::vec3(100.0, 100.0, 100.0));
+        light_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
         light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
 
         // pbr
@@ -334,9 +334,9 @@ class PBR_render : public GLWidget
 
         // merge_render();
 
-        // debug_defferd();
+        debug_defferd();
 
-        deffered_render();
+        // deffered_render();
 
         // // ready for forward render
         // int scrWidth, scrHeight;
