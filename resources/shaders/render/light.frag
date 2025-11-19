@@ -113,6 +113,10 @@ void main()
     F0 = mix(F0, albedo, metalness);    
     vec3 V = normalize(-view_space_position);
     vec3 N = normalize(normal);
+
+    out_frag_color = vec4(N, 1.0);
+    return;
+
     // direction light
     vec3 L = normalize(view_matrix3 * (-d_light.direction));
     vec3 radiance = d_light.color;
@@ -147,7 +151,8 @@ void main()
     // mix
     vec3 ambient = (diffuse + specular) * ao;
     // final render equation
-    final_color = ambient + Lo;
+    // final_color = ambient + Lo;先不考虑IBL
+    final_color = Lo;
     // HDR tonemapping
     final_color = final_color / (final_color + vec3(1.0));
     // gamma correct

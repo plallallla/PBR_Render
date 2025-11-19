@@ -1,4 +1,4 @@
-#version 330 core
+#version 400 core
 out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 WorldPos;
@@ -118,8 +118,14 @@ void main()
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
 
+    FragColor = vec4(N , 1.0);
+    return;
+
+
     // reflectance equation
     vec3 Lo = vec3(0.0);
+
+
 
     vec3 L = normalize(d_light.direction);
     vec3 H = normalize(V + L);
