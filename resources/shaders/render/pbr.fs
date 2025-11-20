@@ -107,18 +107,11 @@ vec3 direct_irradiance(vec3 radiance, vec3 albedo, vec3 V, vec3 N, vec3 L, vec3 
 void main()
 {		
     // material properties
-    // vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
-    // float metallic = texture(metallicMap, TexCoords).r;
-    // float roughness = texture(roughnessMap, TexCoords).r;
-    vec3 albedo = vec3(1.0,1.0,0.0);
-    float metallic = 0.5;
-    float roughness = 0.5;
-    float ao = 0.5;
+    vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
+    float metallic = texture(metallicMap, TexCoords).r;
+    float roughness = texture(roughnessMap, TexCoords).r;
     // input lighting data
-    // vec3 N = getNormalFromMap();
-    vec3 N = normalize(Normal);
-    FragColor = vec4(N , 1.0);return;
-
+    vec3 N = getNormalFromMap();
 
     vec3 V = normalize(camPos - WorldPos);
     vec3 R = reflect(-V, N); 
@@ -130,7 +123,26 @@ void main()
     vec3 H = normalize(V + L);
     vec3 radiance = d_light.color;
     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);    
-    vec3 color = Lo;
+
+ // ambient lighting (we now use IBL as the ambient term)
+    vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+    
+    vec3 kS = F;
+    vec3 kD = 1.0 - kS;
+    kD *= 1.0 - metallic;	  
+    
+    vec3 irradiance = texture(irradianceMap, N).rgb;
+    vec3 diffuse      = irradiance * albedo;
+    
+    // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
+    const float MAX_REFLECTION_LOD = 4.0;
+    vec3 prefilteredColor = textureLod(prefilterMap, R,  roughness * MAX_REFLECTION_LOD).rgb;    
+    vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+    // vec3 ambient = (kD * diffuse + specular) * ao;
+    
+    vec3 color = Lo;    
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2)); 
     FragColor = vec4(color , 1.0);

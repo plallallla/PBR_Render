@@ -41,7 +41,7 @@ class PBR_render : public GLWidget
     Material rusted_iron{TEXTURE_PATH + "pbr/rusted_iron"};
 
     // 天空盒渲染pass
-    GLuint _input_hdr = TEXTURE_MANAGER.load_hdr_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
+    GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
     SkyboxRender _skybox;
 
     // 预处理渲染
@@ -106,12 +106,15 @@ class PBR_render : public GLWidget
 
     virtual void application() override
     {
+
+        stbi_set_flip_vertically_on_load(true);        
+
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         CAMERA.set_position({0.0, 0.0, 4.0});
-        // budf_lut.execute();
-        // equirect_pass.execute(_input_hdr);
-        // convolution_pass.execute(equirect_pass);
-        // prefilter_pass.execute(equirect_pass);
+        budf_lut.execute();
+        equirect_pass.execute(_input_hdr);
+        convolution_pass.execute(equirect_pass);
+        prefilter_pass.execute(equirect_pass);
         int scrWidth, scrHeight;
         glfwGetFramebufferSize(window, &scrWidth, &scrHeight);        
         // gbuffer set
@@ -149,14 +152,7 @@ class PBR_render : public GLWidget
 
 
         // gbuffer
-        gbuffer_sp.use();
         Material::set_samplers(gbuffer_sp, 0);
-        // gbuffer_sp.set_sampler(0, "s_albedo");
-        // gbuffer_sp.set_sampler(1, "s_normal");
-        // gbuffer_sp.set_sampler(2, "s_roughness");
-        // gbuffer_sp.set_sampler(3, "s_metalness");
-        // gbuffer_sp.set_sampler(4, "s_ao");
-      
              
         // light
         light_sp.use();
@@ -334,9 +330,9 @@ class PBR_render : public GLWidget
 
         // merge_render();
 
-        debug_defferd();
+        // debug_defferd();
 
-        // deffered_render();
+        deffered_render();
 
         // // ready for forward render
         // int scrWidth, scrHeight;
@@ -348,11 +344,16 @@ class PBR_render : public GLWidget
 
         // _debug.render_texture(rusted_iron._normal);
         // _debug.render_texture(gbtx_normal);
-        // _debug.render_texture(gbtx_position);
+
+        update_viewport();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST); 
+        glDepthMask(GL_FALSE);        
+        // _debug.render_texture(_input_hdr);
 
         // _skybox.render_texture(equirect_pass, get_projection());
+        // _skybox.render_texture(convolution_pass, get_projection());
         // _skybox.render_texture(prefilter_pass, get_projection());
-        // _skybox.render_texture(prefilter, get_projection());
     }
 
 public:

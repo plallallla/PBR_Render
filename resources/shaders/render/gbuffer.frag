@@ -23,17 +23,17 @@ uniform sampler2D s_ao;
 vec3 getNormalFromMap()
 {
     vec3 tangentNormal = texture(s_normal, vout_uv).xyz * 2.0 - 1.0;
-    vec3 Q1  = dFdx(vout_world_pos);
-    vec3 Q2  = dFdy(vout_world_pos);
+    vec3 Q1 = dFdx(vout_world_pos);
+    vec3 Q2 = dFdy(vout_world_pos);
     vec2 st1 = dFdx(vout_uv);
     vec2 st2 = dFdy(vout_uv);
     vec3 N = normalize(vout_world_normal);
     vec3 T = normalize(Q1*st2.t - Q2*st1.t);
     vec3 B = -normalize(cross(N, T));
     mat3 TBN = mat3(T, B, N);
-    return N;
-    // return normalize(TBN * tangentNormal);
+    return normalize(TBN * tangentNormal);
 }
+
 vec2 normalize_frag_pos(vec4 pos)
 {
     return pos.xy / pos.w * 0.5 + 0.5;

@@ -3,7 +3,7 @@
 in vec2 uv;
 in vec3 cube_uv;
 
-out vec4 out_frag_color;
+out vec4 frag_color;
 
 uniform sampler2D s_position;
 uniform sampler2D s_albedo;
@@ -76,6 +76,21 @@ vec3 direct_irradiance(vec3 radiance, vec3 albedo, vec3 V, vec3 N, vec3 L, vec3 
     return (diffuse + specular) * radiance * NdotL;
 }
 
+vec3 indirect_irradiance(vec3 N, vec3 V, vec3 albedo, vec3 F0, float roughness, float metallic, float ao)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    vec3 R = reflect(-V, N); 
+    vec3 F_env = fresnelSchlickRoughness(NdotV, F0, roughness);
+    // diffuse
+    vec3 convolution = texture(ibl_convolution, N).rgb;
+    vec3 diffuse = (1.0 - F_env) * (1 - metallic) * convolution * albedo;
+    // specular
+    vec3 prefilter = textureLod(ibl_prefilter, R,  roughness * MAX_REFLECTION_LOD).rgb;
+    vec2 brdf = texture(ibl_brdf_lut, vec2(NdotV, roughness)).xy;
+    vec3 specular = (F_env * brdf.x + brdf.y) * ao * prefilter;
+    return diffuse + specular;
+}
+
 struct DirectionLight
 {
     vec3 direction;
@@ -96,24 +111,14 @@ void main()
     float depth = texture(s_position, uv).w;
     if (depth >= 0.99999) 
     {
-        out_frag_color = texture(env_cube, cube_uv);
+        frag_color = texture(env_cube, cube_uv);
         return;
     }
-    
     vec3 world_space_position = texture(s_position, uv).rgb;
     vec3 normal = texture(s_normal, uv).xyz;
-    // vec3 normal = vec3(0.0,1.0,0.0);
-
-    // vec3 albedo = pow(texture(s_albedo, uv).rgb, vec3(2.2));
-    // float roughness = texture(s_albedo, uv).a;
-    // float metallic = texture(s_normal, uv).a;
-    // float ao = texture(s_effects, uv).r;
-
-    vec3 albedo = vec3(1.0,1.0,0.0);
-    float metallic = 0.5;
-    float roughness = 0.5;
-    float ao = 0.5;
-
+    vec3 albedo = pow(texture(s_albedo, uv).rgb, vec3(2.2));
+    float roughness = texture(s_albedo, uv).a;
+    float metallic = texture(s_normal, uv).a;
     // input lighting data
     vec3 N = normalize(normal);
     vec3 V = normalize(eye_position - world_space_position);
@@ -121,13 +126,18 @@ void main()
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
     vec3 Lo = vec3(0.0);
+    // 方向光
     vec3 L = normalize(d_light.direction);
     vec3 H = normalize(V + L);
     vec3 radiance = d_light.color;
-    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);    
-    vec3 color = Lo;
+    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);
+    // ibl
+    float ao = texture(s_effects, uv).r;
+    vec3 ibl = indirect_irradiance(N, V, albedo, F0, roughness, metallic, ao);
+    // 颜色校正
+    vec3 color = Lo + ibl;
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2)); 
-    out_frag_color = vec4(color , 1.0);    
+    frag_color = vec4(color , 1.0);
     return;
 }
