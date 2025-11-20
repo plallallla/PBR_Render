@@ -68,6 +68,7 @@ public:
     }
     void render_texture(GLuint texture, glm::mat4 projection)
     {
+        glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
         glDepthFunc(GL_LEQUAL);
         _sp.use();
@@ -101,7 +102,7 @@ out vec4 FragColor;
 in vec3 TexCoords;
 uniform samplerCube skybox;
 void main()
-{    
+{
     FragColor = texture(skybox, TexCoords);
 }
 )";

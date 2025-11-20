@@ -41,12 +41,17 @@ vec2 normalize_frag_pos(vec4 pos)
     return pos.xy / pos.w * 0.5 + 0.5;
 }
 
+float get_depth()
+{
+    float depth = length(eye_position - vout_world_pos);
+    return (depth - near_plane) / (far_plane - near_plane);
+}
+
 void main()
 {
     // g_position : position + depth
     g_position.xyz = vout_world_pos;
-    float depth = length(eye_position - vout_world_pos);
-    g_position.w = (depth - near_plane) / (far_plane - near_plane);
+    g_position.w = get_depth();
     // g_albedo : albedo + roughness
     g_albedo.rgb = texture(s_albedo, vout_uv).rgb;
     g_albedo.a = texture(s_roughness, vout_uv).r;

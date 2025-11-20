@@ -332,16 +332,15 @@ class PBR_render : public GLWidget
     virtual void render_loop() override
     {
         deffered_render();
-        // direct_render();
 
-        // int scrWidth, scrHeight;
-        // glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
-        // glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
-        // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        // glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        // glBindFramebuffer(GL_FRAMEBUFFER, 0);        
-
-        // _skybox.render_texture(equirect_pass, get_projection());
+        int scrWidth, scrHeight;
+        glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
+        _skybox.render_texture(equirect_pass, get_projection());
     }
 
 public:

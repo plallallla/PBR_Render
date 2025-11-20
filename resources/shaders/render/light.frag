@@ -107,15 +107,17 @@ uniform PointLight p_light[4];
 
 void main()
 {
-    frag_color = texture(env_cube, cube_uv);
-    return;
+    // float depth = texture(s_position, uv).w;
+    // frag_color = vec4(depth, depth, depth, 1.0);
+    // return;
+    // // 没有物体就绘制天空盒
+    // // float depth = texture(s_position, uv).w;
+    // if (depth == 0)
+    // {
+    //     frag_color = texture(env_cube, cube_uv);
+    //     return;
+    // }
     // read gbuffer
-    float depth = texture(s_position, uv).w;
-    if (depth >= 0.99999) 
-    {
-        frag_color = texture(env_cube, cube_uv);
-        return;
-    }
     vec3 world_space_position = texture(s_position, uv).rgb;
     vec3 normal = texture(s_normal, uv).xyz;
     vec3 albedo = pow(texture(s_albedo, uv).rgb, vec3(2.2));
