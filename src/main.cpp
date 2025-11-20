@@ -58,20 +58,6 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "render/light.frag" 
     };
 
-    ShaderProgram pbrShader
-    {
-        SHADERS_PATH + "render/pbr.vs",
-        SHADERS_PATH + "render/pbr.fs" 
-    };  
-    
-    ShaderProgram merge_sp
-    {
-        SHADERS_PATH + "render/merge.vert",
-        SHADERS_PATH + "render/merge.frag" 
-    }; 
-    
- 
-
     // gbuffer资源
     FrameBuffer gbuffer_fb;
     GLuint depth_texture;
@@ -99,10 +85,6 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "common_vertex/quad.vert",
         SHADERS_PATH + "deffered/light.frag" 
     };       
-
-    FrameBuffer d_fb;
-    GLuint d_position;
-    GLuint d_normal;
 
 
     virtual void application() override
@@ -135,15 +117,6 @@ class PBR_render : public GLWidget
         gbuffer_fb.checkFramebufferStatus();
         gbuffer_fb.unbind();
 
-        d_fb.bind();
-        gbuffer_fb.create_render_object(scrWidth, scrHeight);
-        d_position = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
-        gbuffer_fb.attach_color_texture(0, d_position);
-        d_normal = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
-        gbuffer_fb.attach_color_texture(1, d_normal);
-        gbuffer_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
-        d_fb.unbind();
-
         _debug_light_sp.use();
         _debug_light_sp.set_sampler(0, "s_position");
         _debug_light_sp.set_sampler(1, "s_normal");
@@ -165,124 +138,11 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(5, "ibl_prefilter");
         light_sp.set_sampler(6, "ibl_brdf_lut");
         light_sp.set_sampler(7, "env_cube");     
-        
         light_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
         light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
-
-        // pbr
-        pbrShader.use();
-        pbrShader.set_uniform<int>("irradianceMap", 0);
-        pbrShader.set_uniform<int>("prefilterMap", 1);
-        pbrShader.set_uniform<int>("brdfLUT", 2);
-        pbrShader.set_uniform<int>("albedoMap", 3);
-        pbrShader.set_uniform<int>("normalMap", 4);
-        pbrShader.set_uniform<int>("metallicMap", 5);
-        pbrShader.set_uniform<int>("roughnessMap", 6);
-        pbrShader.set_uniform<int>("aoMap", 7);        
-
-        pbrShader.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
-        pbrShader.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
-        pbrShader.set_uniform("projection", get_projection());
-
-        merge_sp.use();
-        merge_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
-        merge_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
-        merge_sp.set_uniform("projection", get_projection());        
-
-
     }
 
-    void debug_defferd()
-    {
-        d_fb.bind();
-        update_viewport();
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_TRUE);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        _debug_gbuffer_sp.use();
-        glm::mat4 model = glm::mat4(1.0f);
-        _debug_gbuffer_sp.set_uniform("model", model);
-        _debug_gbuffer_sp.set_uniform("normal_matrix", glm::transpose(glm::inverse(glm::mat3(model))));
-        _debug_gbuffer_sp.set_uniform("proj_view_model", get_projection() * CAMERA.get_view_matrix() * model);
-        Shape::render_sphere();
-        d_fb.unbind();
 
-        update_viewport();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);       
-        glDepthMask(GL_FALSE); 
-        _debug_light_sp.use();
-        _debug_light_sp.active_sampler(0, d_position);
-        _debug_light_sp.active_sampler(1, d_normal);
-        _debug_light_sp.set_uniform("eye_position", CAMERA.get_position());
-        VertexArray::render_empty_va();        
-    }
-
-    void merge_render()
-    {
-        update_viewport();
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_TRUE);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);           
-        merge_sp.use();
-        glm::mat4 model = glm::mat4(1.0f);
-        merge_sp.set_uniform("model", model);
-        merge_sp.set_uniform("normal_matrix", glm::transpose(glm::inverse(glm::mat3(model))));
-        merge_sp.set_uniform("proj_view_model", get_projection() * CAMERA.get_view_matrix() * model);
-        merge_sp.set_uniform("eye_position", CAMERA.get_position());
-        Shape::render_sphere();        
-    }
-
-    void direct_render()
-    {
-        update_viewport();
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_TRUE);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);        
-        pbrShader.use();
-        glm::mat4 model = glm::mat4(1.0f);
-        pbrShader.set_uniform("view", CAMERA.get_view_matrix());
-        pbrShader.set_uniform("camPos", CAMERA.get_position());
-        pbrShader.set_uniform("model", model);
-        pbrShader.set_uniform("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
-        // bind pre-computed IBL data
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, convolution_pass);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, prefilter_pass);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, budf_lut); 
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, rusted_iron._albedo);
-        glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, rusted_iron._normal);
-        glActiveTexture(GL_TEXTURE5);
-        glBindTexture(GL_TEXTURE_2D, rusted_iron._metallic);
-        glActiveTexture(GL_TEXTURE6);
-        glBindTexture(GL_TEXTURE_2D, rusted_iron._roughness);
-        glActiveTexture(GL_TEXTURE7);
-        glBindTexture(GL_TEXTURE_2D, rusted_iron._ao);   
-        Shape::render_sphere();        
-        for (unsigned int i = 0; i < 4; ++i)
-        {
-            glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
-            newPos = lightPositions[i];
-            pbrShader.set_uniform("lightPositions[" + std::to_string(i) + "]", newPos);
-            pbrShader.set_uniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, newPos);
-            model = glm::scale(model, glm::vec3(0.5f));
-            pbrShader.set_uniform("model", model);
-            pbrShader.set_uniform("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
-            // Shape::render_sphere();
-        }        
-    }
 
     void deffered_render()
     {
@@ -312,12 +172,10 @@ class PBR_render : public GLWidget
         // light
         update_viewport();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);       
-        glDepthMask(GL_FALSE);          
+        glDisable(GL_DEPTH_TEST);   
+        glDepthMask(GL_FALSE);
         light_sp.use();
         light_sp.set_uniform("eye_position", CAMERA.get_position());
-        glm::mat4 cube_uv_trans = glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection);
-        light_sp.set_uniform("cube_uv_trans", cube_uv_trans);
         light_sp.active_sampler(0, gbtx_position);
         light_sp.active_sampler(1, gbtx_albdeo);
         light_sp.active_sampler(2, gbtx_normal);
@@ -332,14 +190,12 @@ class PBR_render : public GLWidget
     virtual void render_loop() override
     {
         deffered_render();
-
+        // 拷贝gbuffer的深度缓存用于深度测试
         int scrWidth, scrHeight;
         glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        
         _skybox.render_texture(equirect_pass, get_projection());
     }
 

@@ -77,8 +77,8 @@ public:
         _sp.active_sampler(0, texture, GL_TEXTURE_CUBE_MAP);
         _va.bind();
         glDrawArrays(GL_TRIANGLES, 0, 36);    
-        glDepthFunc(GL_LESS);
-        glDepthMask(GL_TRUE);      
+        // glDepthFunc(GL_LESS);
+        // glDepthMask(GL_TRUE);      
     }
 };
 

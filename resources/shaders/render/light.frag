@@ -1,7 +1,6 @@
 #version 400 core
 
 in vec2 uv;
-in vec3 cube_uv;
 
 out vec4 frag_color;
 
@@ -107,16 +106,6 @@ uniform PointLight p_light[4];
 
 void main()
 {
-    // float depth = texture(s_position, uv).w;
-    // frag_color = vec4(depth, depth, depth, 1.0);
-    // return;
-    // // 没有物体就绘制天空盒
-    // // float depth = texture(s_position, uv).w;
-    // if (depth == 0)
-    // {
-    //     frag_color = texture(env_cube, cube_uv);
-    //     return;
-    // }
     // read gbuffer
     vec3 world_space_position = texture(s_position, uv).rgb;
     vec3 normal = texture(s_normal, uv).xyz;
@@ -142,6 +131,6 @@ void main()
     vec3 color = Lo + ibl;
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2)); 
-    frag_color = vec4(color , 1.0);
+    frag_color = vec4(color, 1.0);
     return;
 }
