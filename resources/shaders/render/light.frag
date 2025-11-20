@@ -107,6 +107,8 @@ uniform PointLight p_light[4];
 
 void main()
 {
+    frag_color = texture(env_cube, cube_uv);
+    return;
     // read gbuffer
     float depth = texture(s_position, uv).w;
     if (depth >= 0.99999) 

@@ -20,6 +20,8 @@ uniform sampler2D s_roughness;
 uniform sampler2D s_metallic;
 uniform sampler2D s_ao;
 
+uniform vec3 eye_position;
+
 vec3 getNormalFromMap()
 {
     vec3 tangentNormal = texture(s_normal, vout_uv).xyz * 2.0 - 1.0;
@@ -43,7 +45,8 @@ void main()
 {
     // g_position : position + depth
     g_position.xyz = vout_world_pos;
-    g_position.w = gl_FragCoord.z;
+    float depth = length(eye_position - vout_world_pos);
+    g_position.w = (depth - near_plane) / (far_plane - near_plane);
     // g_albedo : albedo + roughness
     g_albedo.rgb = texture(s_albedo, vout_uv).rgb;
     g_albedo.a = texture(s_roughness, vout_uv).r;

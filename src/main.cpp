@@ -294,10 +294,13 @@ class PBR_render : public GLWidget
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
+        glm::mat4 projection = get_projection();
+        glm::mat4 view = CAMERA.get_view_matrix();
         glm::mat4 model(1.0);
         glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
-        glm::mat4 proj_view_model = get_projection() * CAMERA.get_view_matrix() * model;
+        glm::mat4 proj_view_model = projection * view * model;
         gbuffer_sp.set_uniform("model", model);
+        gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
         gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
         gbuffer_sp.set_uniform("proj_view_model", proj_view_model);
         gbuffer_sp.set_uniform("prev_proj_view_model", prev_proj_view_model);
@@ -313,6 +316,8 @@ class PBR_render : public GLWidget
         glDepthMask(GL_FALSE);          
         light_sp.use();
         light_sp.set_uniform("eye_position", CAMERA.get_position());
+        glm::mat4 cube_uv_trans = glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection);
+        light_sp.set_uniform("cube_uv_trans", cube_uv_trans);
         light_sp.active_sampler(0, gbtx_position);
         light_sp.active_sampler(1, gbtx_albdeo);
         light_sp.active_sampler(2, gbtx_normal);
@@ -328,6 +333,13 @@ class PBR_render : public GLWidget
     {
         deffered_render();
         // direct_render();
+
+        // int scrWidth, scrHeight;
+        // glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
+        // glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
+        // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        // glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        // glBindFramebuffer(GL_FRAMEBUFFER, 0);        
 
         // _skybox.render_texture(equirect_pass, get_projection());
     }
