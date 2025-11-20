@@ -39,6 +39,7 @@ class PBR_render : public GLWidget
 {
 
     Material rusted_iron{TEXTURE_PATH + "pbr/rusted_iron"};
+    Material gold{TEXTURE_PATH + "pbr/gold"};
 
     // 天空盒渲染pass
     GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
@@ -302,6 +303,7 @@ class PBR_render : public GLWidget
         gbuffer_sp.set_uniform("prev_proj_view_model", prev_proj_view_model);
         prev_proj_view_model = proj_view_model;
         rusted_iron.active(0); 
+        // gold.active(0); 
         Shape::render_sphere();//some render draw call
         gbuffer_fb.unbind();
         // light
@@ -324,33 +326,10 @@ class PBR_render : public GLWidget
 
     virtual void render_loop() override
     {
-
-        // merge_render();
-        // debug_defferd();
-
-        // direct_render();
         deffered_render();
-
-        // // ready for forward render
-        // int scrWidth, scrHeight;
-        // glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
-        // glViewport(0, 0, scrWidth, scrHeight);          
-        // glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
-        // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   
-        // glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);        
-
-        // _debug.render_texture(rusted_iron._normal);
-        // _debug.render_texture(gbtx_normal);
-
-        // update_viewport();
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // glDisable(GL_DEPTH_TEST); 
-        // glDepthMask(GL_FALSE);        
-        // _debug.render_texture(_input_hdr);
+        // direct_render();
 
         // _skybox.render_texture(equirect_pass, get_projection());
-        // _skybox.render_texture(convolution_pass, get_projection());
-        // _skybox.render_texture(prefilter_pass, get_projection());
     }
 
 public:
