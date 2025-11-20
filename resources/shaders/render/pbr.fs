@@ -110,6 +110,7 @@ void main()
     vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
     float metallic = texture(metallicMap, TexCoords).r;
     float roughness = texture(roughnessMap, TexCoords).r;
+    float ao = texture(aoMap, TexCoords).r;
     // input lighting data
     vec3 N = getNormalFromMap();
 
@@ -140,10 +141,13 @@ void main()
     vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
     vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-    // vec3 ambient = (kD * diffuse + specular) * ao;
+    vec3 ambient = (kD * diffuse + specular) * ao;
     
-    vec3 color = Lo;    
+    vec3 color = Lo + ambient;    
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2)); 
+
+    // color = N;
+
     FragColor = vec4(color , 1.0);
 }

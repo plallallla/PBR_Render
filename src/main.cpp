@@ -315,23 +315,20 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(1, gbtx_albdeo);
         light_sp.active_sampler(2, gbtx_normal);
         light_sp.active_sampler(3, gbtx_effects);
-        light_sp.active_sampler(4, convolution_pass);
-        light_sp.active_sampler(5, prefilter_pass);
+        light_sp.active_sampler(4, convolution_pass, GL_TEXTURE_CUBE_MAP);
+        light_sp.active_sampler(5, prefilter_pass, GL_TEXTURE_CUBE_MAP);
         light_sp.active_sampler(6, budf_lut);
-        light_sp.active_sampler(7, equirect_pass);
+        light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
         VertexArray::render_empty_va();        
     }
 
     virtual void render_loop() override
     {
 
-        // direct_render();
-
-
         // merge_render();
-
         // debug_defferd();
 
+        // direct_render();
         deffered_render();
 
         // // ready for forward render
@@ -345,10 +342,10 @@ class PBR_render : public GLWidget
         // _debug.render_texture(rusted_iron._normal);
         // _debug.render_texture(gbtx_normal);
 
-        update_viewport();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST); 
-        glDepthMask(GL_FALSE);        
+        // update_viewport();
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // glDisable(GL_DEPTH_TEST); 
+        // glDepthMask(GL_FALSE);        
         // _debug.render_texture(_input_hdr);
 
         // _skybox.render_texture(equirect_pass, get_projection());

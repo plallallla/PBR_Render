@@ -138,6 +138,10 @@ void main()
     vec3 color = Lo + ibl;
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2)); 
-    frag_color = vec4(color , 1.0);
+
+
+
+    color = texture(ibl_convolution, N).rgb;
+    frag_color = vec4(N , 1.0);
     return;
 }
