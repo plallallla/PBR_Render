@@ -102,11 +102,15 @@ struct PointLight
 {
     vec3 position;
     vec3 color;
+    float constant;
+    float linear;
+    float quadratic;
 };
 uniform PointLight p_light[4];
 
 void main()
 {
+    // skybox
     float depth = texture(s_position, uv).w;
     if (depth == 1) 
     {
@@ -116,7 +120,7 @@ void main()
     // read gbuffer
     vec3 world_space_position = texture(s_position, uv).rgb;
     vec3 normal = texture(s_normal, uv).xyz;
-    vec3 albedo = pow(texture(s_albedo, uv).rgb, vec3(2.2));
+    vec3 albedo = texture(s_albedo, uv).rgb;
     float roughness = texture(s_albedo, uv).a;
     float metallic = texture(s_normal, uv).a;
     // input lighting data
@@ -126,18 +130,25 @@ void main()
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
     vec3 Lo = vec3(0.0);
-    // 方向光
+    // directional light
     vec3 L = normalize(d_light.direction);
     vec3 H = normalize(V + L);
     vec3 radiance = d_light.color;
     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);
+    // point light
+    for (int i = 0; i < 4; i++)
+    {
+        L = normalize(p_light[i].position - world_space_position);
+        H = normalize(V + L);
+        float d = distance(p_light[i].position, world_space_position);
+        float attenuation = 1.0 / (p_light[i].constant + d * p_light[i].linear + d * d * p_light[i].quadratic);
+        radiance = p_light[i].color * attenuation;
+        Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);
+    }
     // ibl
     float ao = texture(s_effects, uv).r;
     vec3 ibl = indirect_irradiance(N, V, albedo, F0, roughness, metallic, ao);
-    // 颜色校正
-    vec3 color = Lo + ibl;
-    color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2)); 
-    frag_color = vec4(color, 1.0);
+    // mix
+    frag_color = vec4(Lo + ibl, 1.0);
     return;
 }

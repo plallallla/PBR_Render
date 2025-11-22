@@ -45,13 +45,18 @@ class PBR_render : public GLWidget
     GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
     SkyboxRender _skybox;
 
+    // 后处理
+    PostRender color_correction{ SHADERS_PATH + "post_process/color_correction.frag" };
+
     // 预处理渲染
     BRDF_LUT budf_lut;
     EquirectConvertRender equirect_pass;
     ConvolutionIBLRender convolution_pass;
     PrefilterIBLRender prefilter_pass;
 
-    // 着色器
+    // light资源
+    FrameBuffer light_fb;
+    GLuint light_result_texture;
     ShaderProgram light_sp
     {
         SHADERS_PATH + "render/light.vert",
@@ -73,8 +78,6 @@ class PBR_render : public GLWidget
     };    
 
     PostRender _debug;
-
-    QuadRender _quad;
 
     ShaderProgram _debug_gbuffer_sp
     {
@@ -129,6 +132,11 @@ class PBR_render : public GLWidget
         Material::set_samplers(gbuffer_sp, 0);
              
         // light
+        light_fb.bind();
+        light_fb.create_render_object(scrWidth, scrHeight);
+        light_result_texture = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
+        light_fb.attach_color_texture(0, light_result_texture);
+        light_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0});
         light_sp.use();
         light_sp.set_sampler(0, "s_position");
         light_sp.set_sampler(1, "s_albedo");
@@ -142,7 +150,12 @@ class PBR_render : public GLWidget
         light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
     }
 
-
+    void render_scene()
+    {
+        rusted_iron.active(0);
+        // gold.active(0); 
+        Shape::render_sphere();
+    }
 
     void deffered_render()
     {
@@ -167,11 +180,10 @@ class PBR_render : public GLWidget
         gbuffer_sp.set_uniform("proj_view_model", proj_view_model);
         gbuffer_sp.set_uniform("prev_proj_view_model", prev_proj_view_model);
         prev_proj_view_model = proj_view_model;
-        rusted_iron.active(0); 
-        // gold.active(0); 
-        Shape::render_sphere();//some render draw call
+        render_scene();// some drawcall
         gbuffer_fb.unbind();
         // light
+        light_fb.bind();
         update_viewport();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);   
@@ -188,11 +200,15 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(6, budf_lut);
         light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
         VertexArray::render_empty_va();        
+        light_fb.unbind();
     }
 
     virtual void render_loop() override
     {
         deffered_render();
+        color_correction.render_texture(light_result_texture);
+        // _debug.render_texture(light_result_texture);
+
         // 拷贝gbuffer的深度缓存用于深度测试
         // int scrWidth, scrHeight;
         // glfwGetFramebufferSize(window, &scrWidth, &scrHeight);

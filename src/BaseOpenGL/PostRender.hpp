@@ -44,7 +44,7 @@ public:
 };
 
 inline std::string PostRender::default_vs_src = R"(
-#version 330 core
+#version 400 core
 out vec2 uv;
 void main()
 {
@@ -58,7 +58,7 @@ void main()
 )";
 
 inline std::string PostRender::default_fs_src = R"(
-#version 330 core
+#version 400 core
 out vec4 FragColor;
 in vec2 uv;
 uniform sampler2D screenTexture;

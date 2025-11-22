@@ -53,7 +53,7 @@ void main()
     g_position.xyz = vout_world_pos;
     g_position.w = get_depth();
     // g_albedo : albedo + roughness
-    g_albedo.rgb = texture(s_albedo, vout_uv).rgb;
+    g_albedo.rgb = pow(texture(s_albedo, vout_uv).rgb, vec3(2.2));
     g_albedo.a = texture(s_roughness, vout_uv).r;
     // g_normal : normal + metalic
     g_normal.rgb = getNormalFromMap();
