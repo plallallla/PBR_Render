@@ -1,6 +1,7 @@
 #version 400 core
 
 in vec2 uv;
+in vec3 cube_uv;
 
 out vec4 frag_color;
 
@@ -106,6 +107,12 @@ uniform PointLight p_light[4];
 
 void main()
 {
+    float depth = texture(s_position, uv).w;
+    if (depth == 1) 
+    {
+        frag_color = texture(env_cube, cube_uv);
+        return;
+    }
     // read gbuffer
     vec3 world_space_position = texture(s_position, uv).rgb;
     vec3 normal = texture(s_normal, uv).xyz;

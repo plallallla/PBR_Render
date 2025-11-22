@@ -74,6 +74,8 @@ class PBR_render : public GLWidget
 
     PostRender _debug;
 
+    QuadRender _quad;
+
     ShaderProgram _debug_gbuffer_sp
     {
         SHADERS_PATH + "deffered/gbuffer.vert",
@@ -103,8 +105,6 @@ class PBR_render : public GLWidget
         // gbuffer set
         gbuffer_fb.bind();
         gbuffer_fb.create_render_object(scrWidth, scrHeight);
-        // depth_texture = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_DEPTH);
-        // gbuffer_fb.attach_depth_texture(depth_texture);       
         gbtx_position = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA16F);
         gbuffer_fb.attach_color_texture(0, gbtx_position);
         gbtx_albdeo = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA);
@@ -154,6 +154,8 @@ class PBR_render : public GLWidget
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
+        static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+        glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1        
         glm::mat4 projection = get_projection();
         glm::mat4 view = CAMERA.get_view_matrix();
         glm::mat4 model(1.0);
@@ -176,6 +178,7 @@ class PBR_render : public GLWidget
         glDepthMask(GL_FALSE);
         light_sp.use();
         light_sp.set_uniform("eye_position", CAMERA.get_position());
+        light_sp.set_uniform("cube_uv_trans", glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection));        
         light_sp.active_sampler(0, gbtx_position);
         light_sp.active_sampler(1, gbtx_albdeo);
         light_sp.active_sampler(2, gbtx_normal);
@@ -191,12 +194,12 @@ class PBR_render : public GLWidget
     {
         deffered_render();
         // 拷贝gbuffer的深度缓存用于深度测试
-        int scrWidth, scrHeight;
-        glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        _skybox.render_texture(equirect_pass, get_projection());
+        // int scrWidth, scrHeight;
+        // glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
+        // glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
+        // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        // glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        // _skybox.render_texture(equirect_pass, get_projection());
     }
 
 public:
