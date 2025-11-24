@@ -47,6 +47,7 @@ class PBR_render : public GLWidget
 
     // 后处理
     PostRender color_correction{ SHADERS_PATH + "post_process/color_correction.frag" };
+    PostRender fxaa{ SHADERS_PATH + "post_process/fxaa.frag" };
 
     // 预处理渲染
     BRDF_LUT budf_lut;
@@ -148,6 +149,9 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(7, "env_cube");     
         light_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
         light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
+
+        // postprocess
+        fxaa._sp.set_uniform("texelSize", glm::vec2(1./scrWidth,1./scrHeight));
     }
 
     void render_scene()
@@ -186,7 +190,7 @@ class PBR_render : public GLWidget
         light_fb.bind();
         update_viewport();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);   
+        glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
         light_sp.use();
         light_sp.set_uniform("eye_position", CAMERA.get_position());
@@ -205,9 +209,10 @@ class PBR_render : public GLWidget
 
     virtual void render_loop() override
     {
-        deffered_render();
-        color_correction.render_texture(light_result_texture);
-        // _debug.render_texture(light_result_texture);
+        // deffered_render();
+        // color_correction.render_texture(light_result_texture);
+        fxaa.render_texture(light_result_texture);
+        // _debug.render_texture(rusted_iron._albedo);
 
         // 拷贝gbuffer的深度缓存用于深度测试
         // int scrWidth, scrHeight;

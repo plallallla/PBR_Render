@@ -143,7 +143,7 @@ void main()
         float d = distance(p_light[i].position, world_space_position);
         float attenuation = 1.0 / (p_light[i].constant + d * p_light[i].linear + d * d * p_light[i].quadratic);
         radiance = p_light[i].color * attenuation;
-        Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);
+        // Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);
     }
     // ibl
     float ao = texture(s_effects, uv).r;
