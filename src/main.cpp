@@ -39,10 +39,6 @@ class PBR_render : public GLWidget
     GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
     SkyboxRender _skybox;
 
-    // 后处理
-    // PostRender color_correction{ SHADERS_PATH + "post_process/color_correction.frag" };
-    // PostRender fxaa{ SHADERS_PATH + "post_process/fxaa.frag" };
-
     // 预处理渲染
     BRDF_LUT budf_lut;
     EquirectConvertRender equirect_pass;
@@ -72,7 +68,10 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "render/gbuffer.frag" 
     };    
 
+    // 后处理
     PostprocessRender _display_pass{ SHADERS_PATH + "post_process/display.frag" };
+    PostprocessRender _color_correction_pass{ SHADERS_PATH + "post_process/color_correction.frag" };
+    PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
 
     ShaderProgram _debug_gbuffer_sp
     {
@@ -146,7 +145,9 @@ class PBR_render : public GLWidget
 
         // postprocess
         _display_pass.set(scrWidth, scrHeight);
-
+        _color_correction_pass.set(scrWidth, scrHeight);
+        _fxaa_pass.set(scrWidth, scrHeight);
+        _fxaa_pass._sp.set_uniform("frag_size", glm::vec2(1.0 / scrWidth, 1.0 / scrHeight));
     }
 
     void render_scene()
@@ -204,11 +205,13 @@ class PBR_render : public GLWidget
 
     virtual void render_loop() override
     {
-        // deffered_render();
-        // color_correction.render_texture(light_result_texture);
-        // fxaa.render_texture(light_result_texture);
-        // _debug.render_texture(rusted_iron._albedo);
-        _display_pass.render(rusted_iron._albedo);
+        deffered_render();
+        // 后处理
+        _color_correction_pass.execute(light_result_texture);
+        _fxaa_pass.execute(_color_correction_pass);
+
+        // _display_pass.render(_fxaa_pass);
+        _display_pass.render(_color_correction_pass);
 
         // 拷贝gbuffer的深度缓存用于深度测试
         // int scrWidth, scrHeight;
