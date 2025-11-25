@@ -56,7 +56,7 @@ class EquirectConvertRender : public PrecomputedRender
 {
     ShaderProgram _sp
     {
-        SHADERS_PATH + "common_vertex/cube.vert", 
+        SHADERS_PATH + "pre_process/cube.vert", 
         SHADERS_PATH + "pre_process/equirectangular.frag"
     };
 public:
@@ -84,7 +84,7 @@ class ConvolutionIBLRender : public PrecomputedRender
 {
     ShaderProgram _sp
     {
-        SHADERS_PATH + "common_vertex/cube.vert", 
+        SHADERS_PATH + "pre_process/cube.vert", 
         SHADERS_PATH + "pre_process/convolution.frag"
     };        
 public:
@@ -113,7 +113,7 @@ class PrefilterIBLRender : public PrecomputedRender
 {
     ShaderProgram _sp
     {
-        SHADERS_PATH + "common_vertex/cube.vert", 
+        SHADERS_PATH + "pre_process/cube.vert", 
         SHADERS_PATH + "pre_process/prefilter.frag"
     };
 public:
@@ -152,7 +152,7 @@ class BRDF_LUT : public PrecomputedRender
 {
     ShaderProgram _sp
     {
-        SHADERS_PATH + "common_vertex/quad.vert", 
+        SHADERS_PATH + "pre_process/quad.vert", 
         SHADERS_PATH + "pre_process/brdf_lut.frag"
     };
 public:

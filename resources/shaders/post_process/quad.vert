@@ -1,7 +1,5 @@
 #version 400 core
-
 out vec2 uv;
-
 void main()
 {
     uv = vec2

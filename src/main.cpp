@@ -1,17 +1,11 @@
 #include "Camera.hpp"
-#include "FrameBuffer.hpp"
 #include "GLWidget.hpp"
-#include "QuadRender.hpp"
-#include "Precompution.hpp"
+#include "PrecomputedRender.hpp"
+#include "PostprocessRender.hpp"
 #include "ShaderProgram.hpp"
 #include "Shape.hpp"
 #include "SkyboxRender.hpp"
 #include "Material.hpp"
-#include "Model.hpp"
-
-#include "PostRender.hpp"
-#include "Texture.hpp"
-#include "TextureAttributes.hpp"
 #include "VertexArray.hpp"
 #include "utility.hpp"
 #include <glm/fwd.hpp>
@@ -46,8 +40,8 @@ class PBR_render : public GLWidget
     SkyboxRender _skybox;
 
     // 后处理
-    PostRender color_correction{ SHADERS_PATH + "post_process/color_correction.frag" };
-    PostRender fxaa{ SHADERS_PATH + "post_process/fxaa.frag" };
+    // PostRender color_correction{ SHADERS_PATH + "post_process/color_correction.frag" };
+    // PostRender fxaa{ SHADERS_PATH + "post_process/fxaa.frag" };
 
     // 预处理渲染
     BRDF_LUT budf_lut;
@@ -78,7 +72,7 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "render/gbuffer.frag" 
     };    
 
-    PostRender _debug;
+    DisplayRender _debug;
 
     ShaderProgram _debug_gbuffer_sp
     {
@@ -151,7 +145,9 @@ class PBR_render : public GLWidget
         light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
 
         // postprocess
-        fxaa._sp.set_uniform("texelSize", glm::vec2(1./scrWidth,1./scrHeight));
+        _debug.set(scrWidth, scrHeight);
+        _debug.execute(rusted_iron._albedo);
+
     }
 
     void render_scene()
@@ -211,8 +207,9 @@ class PBR_render : public GLWidget
     {
         // deffered_render();
         // color_correction.render_texture(light_result_texture);
-        fxaa.render_texture(light_result_texture);
+        // fxaa.render_texture(light_result_texture);
         // _debug.render_texture(rusted_iron._albedo);
+        _debug.render(_debug);
 
         // 拷贝gbuffer的深度缓存用于深度测试
         // int scrWidth, scrHeight;
