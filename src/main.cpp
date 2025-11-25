@@ -12,20 +12,20 @@
 #include <glm/matrix.hpp>
 
 
-    std::vector<glm::vec3> lightPositions
-    {
-        glm::vec3(-10.0f,  10.0f, 10.0f),
-        glm::vec3( 10.0f,  10.0f, 10.0f),
-        glm::vec3(-10.0f, -10.0f, 10.0f),
-        glm::vec3( 10.0f, -10.0f, 10.0f),
-    };
-    std::vector<glm::vec3> lightColors
-    {
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f)
-    };
+std::vector<glm::vec3> lightPositions
+{
+    glm::vec3(-10.0f,  10.0f, 10.0f),
+    glm::vec3( 10.0f,  10.0f, 10.0f),
+    glm::vec3(-10.0f, -10.0f, 10.0f),
+    glm::vec3( 10.0f, -10.0f, 10.0f),
+};
+std::vector<glm::vec3> lightColors
+{
+    glm::vec3(300.0f, 300.0f, 300.0f),
+    glm::vec3(300.0f, 300.0f, 300.0f),
+    glm::vec3(300.0f, 300.0f, 300.0f),
+    glm::vec3(300.0f, 300.0f, 300.0f)
+};
 
 
 
@@ -72,7 +72,7 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "render/gbuffer.frag" 
     };    
 
-    DisplayRender _debug;
+    PostprocessRender _display_pass{ SHADERS_PATH + "post_process/display.frag" };
 
     ShaderProgram _debug_gbuffer_sp
     {
@@ -145,8 +145,7 @@ class PBR_render : public GLWidget
         light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
 
         // postprocess
-        _debug.set(scrWidth, scrHeight);
-        _debug.execute(rusted_iron._albedo);
+        _display_pass.set(scrWidth, scrHeight);
 
     }
 
@@ -209,7 +208,7 @@ class PBR_render : public GLWidget
         // color_correction.render_texture(light_result_texture);
         // fxaa.render_texture(light_result_texture);
         // _debug.render_texture(rusted_iron._albedo);
-        _debug.render(_debug);
+        _display_pass.render(rusted_iron._albedo);
 
         // 拷贝gbuffer的深度缓存用于深度测试
         // int scrWidth, scrHeight;

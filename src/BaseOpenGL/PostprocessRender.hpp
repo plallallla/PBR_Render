@@ -1,4 +1,3 @@
-#include <vector>
 #include "ShaderProgram.hpp"
 #include "VertexArray.hpp"
 #include "FrameBuffer.hpp"
@@ -12,31 +11,19 @@ protected:
     GLuint _width;
     GLuint _height;
 public:
-    PostprocessRender(GLuint width = 512, GLuint height = 512) : _width{ width }, _height{ height } {}
+    ShaderProgram _sp;
+    PostprocessRender(std::string_view frag_path)
+    {
+        _sp.load_vs_file(SHADERS_PATH + "post_process/quad.vert");
+        _sp.load_fs_file(frag_path);
+        _sp.link();
+    }
     void set(GLuint width, GLuint height) 
     {
         _width = width;
         _height = height;
     }
-    virtual void execute(GLuint input = 0) = 0;
-    virtual void render(GLuint input) = 0;
-    operator GLuint()
-    {
-        return _result;
-    }
-
-};
-
-class DisplayRender : public PostprocessRender
-{
-    ShaderProgram _sp
-    {
-        SHADERS_PATH + "post_process/quad.vert", 
-        SHADERS_PATH + "post_process/display.frag"
-    };
-public:
-    DisplayRender(GLuint width = 512, GLuint height = 512) : PostprocessRender{ width, height } {}
-    virtual void execute(GLuint input = 0) override
+    void execute(GLuint input = 0)
     {
         _result = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, TEXTURE_2D_RGBA);       
         _fb.bind();
@@ -48,7 +35,7 @@ public:
         VertexArray::render_empty_va();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);        
     }
-    virtual void render(GLuint input) override
+    void render(GLuint input)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, _width, _height);
@@ -57,4 +44,9 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         VertexArray::render_empty_va();
     }
+    operator GLuint()
+    {
+        return _result;
+    }
+
 };
