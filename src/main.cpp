@@ -11,6 +11,8 @@
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
 
+#include "Model.hpp"
+
 
 std::vector<glm::vec3> lightPositions
 {
@@ -34,6 +36,8 @@ class PBR_render : public GLWidget
 
     Material rusted_iron{TEXTURE_PATH + "pbr/rusted_iron"};
     Material gold{TEXTURE_PATH + "pbr/gold"};
+
+    // Model m{"../ resources/textures/fbx/Cerberus_by_Andrew_Maximov/Cerberus_LP.FBX"};
 
     // 天空盒渲染pass
     GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
@@ -72,6 +76,7 @@ class PBR_render : public GLWidget
     PostprocessRender _display_pass{ SHADERS_PATH + "post_process/display.frag" };
     PostprocessRender _color_correction_pass{ SHADERS_PATH + "post_process/color_correction.frag" };
     PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
+    PostprocessRender _motion_blur_pass{ SHADERS_PATH + "post_process/motion_blur.frag" };
 
     ShaderProgram _debug_gbuffer_sp
     {
@@ -146,8 +151,15 @@ class PBR_render : public GLWidget
         // postprocess
         _display_pass.set(scrWidth, scrHeight);
         _color_correction_pass.set(scrWidth, scrHeight);
+
         _fxaa_pass.set(scrWidth, scrHeight);
+        _fxaa_pass._sp.use();
         _fxaa_pass._sp.set_uniform("frag_size", glm::vec2(1.0 / scrWidth, 1.0 / scrHeight));
+
+        _motion_blur_pass.set(scrWidth, scrHeight);
+        _motion_blur_pass._sp.use();
+        _motion_blur_pass._sp.set_sampler(0, "screenTexture");
+        _motion_blur_pass._sp.set_sampler(1, "gEffects");
     }
 
     void render_scene()
@@ -207,19 +219,10 @@ class PBR_render : public GLWidget
     {
         deffered_render();
         // 后处理
-        _color_correction_pass.execute(light_result_texture);
+        _motion_blur_pass.execute({light_result_texture, gbtx_effects});
+        _color_correction_pass.execute(_motion_blur_pass);
         _fxaa_pass.execute(_color_correction_pass);
-
-        // _display_pass.render(_fxaa_pass);
-        _display_pass.render(_color_correction_pass);
-
-        // 拷贝gbuffer的深度缓存用于深度测试
-        // int scrWidth, scrHeight;
-        // glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
-        // glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
-        // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        // glBlitFramebuffer(0, 0, scrWidth, scrHeight, 0, 0, scrWidth, scrHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        // _skybox.render_texture(equirect_pass, get_projection());
+        _display_pass.render(_fxaa_pass);
     }
 
 public:

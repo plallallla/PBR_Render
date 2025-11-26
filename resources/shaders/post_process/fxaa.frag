@@ -16,7 +16,6 @@ const float span_max = 8.0;
 const float reduce_mul = 1.0 / 8.0;
 const float reduce_min = 1.0 / 128.0;
 
-
 void main() 
 {
     vec3 rgbN = texture(screenTexture, uv - frag_size * vec2(0, 1)).rgb;
