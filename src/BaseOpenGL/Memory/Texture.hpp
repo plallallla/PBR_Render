@@ -105,6 +105,8 @@ public:
         {
             LOG.info(std::string{"Texture load error : "} + path.data());
             stbi_image_free(data);
+            throw std::runtime_error(std::string{"Texture load error : "} + path.data());
+            return 0;
         }
         switch (nrComponents) 
         {

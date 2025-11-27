@@ -36,9 +36,7 @@ class PBR_render : public GLWidget
 {
 
     Material rusted_iron{TEXTURE_PATH + "pbr/rusted_iron"};
-    Material gold{TEXTURE_PATH + "pbr/gold"};
-
-
+    Material woodfloor{TEXTURE_PATH + "pbr/woodfloor"};
 
     // 天空盒渲染pass
     GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
@@ -90,7 +88,7 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "deffered/light.frag" 
     };       
 
-    glm::mat4 prev_proj_view_model;
+    // glm::mat4 prev_proj_view_model;
     glm::mat4 projection;
     glm::mat4 view;
     glm::mat4 prev_projection;
@@ -108,12 +106,13 @@ class PBR_render : public GLWidget
         
         teapot_obj.load_single_obj({"../resources/obj/teapot.obj"});
         teapot_model = glm::mat4(1.0);
+        teapot_model = glm::translate(teapot_model, {0.0, 2.0, 0.0});
         floor_obj.load_single_obj({"../resources/obj/floor.obj"});
         floor_model = glm::mat4(1.0);
-        floor_model = glm::scale(floor_model, {10.0, 10.0, 0.0});
+        floor_model = glm::scale(floor_model, {10.0, 10.0, 10.0});
 
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-        CAMERA.set_position({0.0, 0.0, 4.0});
+        CAMERA.set_position({0.0, 3.0, 10.0});
         budf_lut.execute();
         equirect_pass.execute(_input_hdr);
         convolution_pass.execute(equirect_pass);
@@ -179,59 +178,18 @@ class PBR_render : public GLWidget
 
     }
 
-    void render_scene()
+    void render_object(Model& m, const glm::mat4 model, const Material& material)
     {
-        rusted_iron.active(0);
-        // Shape::render_sphere();
-        // gold.active(0);
-        floor_obj.render_elements(gbuffer_sp);
-    }
-
-    void deffered_render()
-    {
-        // gbuffer
-        gbuffer_fb.bind();
-        gbuffer_sp.use();
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_TRUE);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-        glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1        
-        glm::mat4 projection = get_projection();
-        glm::mat4 view = CAMERA.get_view_matrix();
-        glm::mat4 model(1.0);
-        glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
-        glm::mat4 proj_view_model = projection * view * model;
         gbuffer_sp.set_uniform("model", model);
         gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
+        glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
         gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
-        gbuffer_sp.set_uniform("proj_view_model", proj_view_model);
-        gbuffer_sp.set_uniform("prev_proj_view_model", prev_proj_view_model);
-        prev_proj_view_model = proj_view_model;
-        render_scene();// some drawcall
-        gbuffer_fb.unbind();
-        // light
-        light_fb.bind();
-        update_viewport();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);
-        glDepthMask(GL_FALSE);
-        light_sp.use();
-        light_sp.set_uniform("eye_position", CAMERA.get_position());
-        light_sp.set_uniform("cube_uv_trans", glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection));        
-        light_sp.active_sampler(0, gbtx_position);
-        light_sp.active_sampler(1, gbtx_albdeo);
-        light_sp.active_sampler(2, gbtx_normal);
-        light_sp.active_sampler(3, gbtx_effects);
-        light_sp.active_sampler(4, convolution_pass, GL_TEXTURE_CUBE_MAP);
-        light_sp.active_sampler(5, prefilter_pass, GL_TEXTURE_CUBE_MAP);
-        light_sp.active_sampler(6, budf_lut);
-        light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
-        VertexArray::render_empty_va();        
-        light_fb.unbind();
+        gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
+        gbuffer_sp.set_uniform("prev_proj_view_model", prev_projection * prev_view * model);
+        material.active(0);
+        m.render_elements(gbuffer_sp);        
     }
+
     void model_render(const Model& m, const glm::mat4& model, Material& material)
     {
         glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
@@ -242,6 +200,8 @@ class PBR_render : public GLWidget
     }
     void geometry_render()
     {
+        projection = get_projection();
+        view = CAMERA.get_view_matrix(); 
         gbuffer_fb.bind();
         gbuffer_sp.use();
         glEnable(GL_DEPTH_TEST);
@@ -250,13 +210,30 @@ class PBR_render : public GLWidget
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-        glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1 
-        gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
-
-        model_render(teapot_obj, teapot_model, rusted_iron);
-        model_render(floor_obj, floor_model, rusted_iron);
+        glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1        
         
+        render_object(teapot_obj, teapot_model, rusted_iron);
+        render_object(floor_obj, floor_model, woodfloor);
+
         gbuffer_fb.unbind();
+        prev_projection = projection;
+        prev_view = view;
+
+        // gbuffer_fb.bind();
+        // gbuffer_sp.use();
+        // glEnable(GL_DEPTH_TEST);
+        // glDepthMask(GL_TRUE);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // glEnable(GL_CULL_FACE);
+        // glCullFace(GL_BACK);
+        // static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+        // glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1 
+        // gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
+
+        // model_render(teapot_obj, teapot_model, rusted_iron);
+        // model_render(floor_obj, floor_model, rusted_iron);
+        
+        // gbuffer_fb.unbind();
     }    
 
     void light_render()
@@ -292,14 +269,13 @@ class PBR_render : public GLWidget
 
     virtual void render_loop() override
     {
-        // projection = get_projection();
-        // view = CAMERA.get_view_matrix();        
         // geometry_render();
-        // prev_projection = projection;
-        // prev_view = view;
-        // light_render();
-        deffered_render();
+
+        // deffered_render();
+        geometry_render();
+        light_render();
         postprocess();
+        std::cout << CAMERA.get_position().x << " " << CAMERA.get_position().y << " " << CAMERA.get_position().z << std::endl;
     }
 
 public:
