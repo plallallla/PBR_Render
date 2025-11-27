@@ -175,12 +175,12 @@ struct Shape
         {
             float planeVertices[] = 
             {
-                5.f, -5.f,  5.f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
-                -5.f, -5.f,  5.f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-                -5.f, -5.f, -5.f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
-                5.f, -5.f,  5.f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
-                -5.f, -5.f, -5.f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
-                5.f, -5.f, -5.f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f
+            // positions            // normals         // texcoords
+            25.0f, -0.5f, 25.0f, 0.0f,  1.0f,   0.0f,  25.0f,  0.0f, -25.0f, -0.5f, 25.0f,  0.0f,
+            1.0f,  0.0f,  0.0f,  0.0f,  -25.0f, -0.5f, -25.0f, 0.0f, 1.0f,   0.0f,  0.0f,   25.0f,
+
+            25.0f, -0.5f, 25.0f, 0.0f,  1.0f,   0.0f,  25.0f,  0.0f, -25.0f, -0.5f, -25.0f, 0.0f,
+            1.0f,  0.0f,  0.0f,  25.0f, 25.0f,  -0.5f, -25.0f, 0.0f, 1.0f,   0.0f,  25.0f,  25.0f
             };
             va.attach_vertex_buffer(PNT_LAYOUT, BUFFER.generate_buffer(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices));
         });

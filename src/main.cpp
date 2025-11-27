@@ -8,6 +8,7 @@
 #include "Material.hpp"
 #include "VertexArray.hpp"
 #include "utility.hpp"
+#include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
 
@@ -37,7 +38,7 @@ class PBR_render : public GLWidget
     Material rusted_iron{TEXTURE_PATH + "pbr/rusted_iron"};
     Material gold{TEXTURE_PATH + "pbr/gold"};
 
-    // Model m{"../ resources/textures/fbx/Cerberus_by_Andrew_Maximov/Cerberus_LP.FBX"};
+
 
     // 天空盒渲染pass
     GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
@@ -65,7 +66,6 @@ class PBR_render : public GLWidget
     GLuint gbtx_albdeo;
     GLuint gbtx_normal;
     GLuint gbtx_effects;
-    glm::mat4 prev_proj_view_model;
     ShaderProgram gbuffer_sp
     {
         SHADERS_PATH + "render/gbuffer.vert",
@@ -90,11 +90,27 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "deffered/light.frag" 
     };       
 
+    glm::mat4 prev_proj_view_model;
+    glm::mat4 projection;
+    glm::mat4 view;
+    glm::mat4 prev_projection;
+    glm::mat4 prev_view;
+
+    Model teapot_obj;
+    glm::mat4 teapot_model;
+    Model floor_obj;
+    glm::mat4 floor_model;
 
     virtual void application() override
     {
 
-        stbi_set_flip_vertically_on_load(true);        
+        stbi_set_flip_vertically_on_load(true);
+        
+        teapot_obj.load_single_obj({"../resources/obj/teapot.obj"});
+        teapot_model = glm::mat4(1.0);
+        floor_obj.load_single_obj({"../resources/obj/floor.obj"});
+        floor_model = glm::mat4(1.0);
+        floor_model = glm::scale(floor_model, {10.0, 10.0, 0.0});
 
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         CAMERA.set_position({0.0, 0.0, 4.0});
@@ -160,13 +176,15 @@ class PBR_render : public GLWidget
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
+
     }
 
     void render_scene()
     {
         rusted_iron.active(0);
-        // gold.active(0); 
-        Shape::render_sphere();
+        // Shape::render_sphere();
+        // gold.active(0);
+        floor_obj.render_elements(gbuffer_sp);
     }
 
     void deffered_render()
@@ -214,15 +232,74 @@ class PBR_render : public GLWidget
         VertexArray::render_empty_va();        
         light_fb.unbind();
     }
-
-    virtual void render_loop() override
+    void model_render(const Model& m, const glm::mat4& model, Material& material)
     {
-        deffered_render();
-        // 后处理
+        glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
+        gbuffer_sp.set_uniform("model", model);        
+        gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
+        gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
+        gbuffer_sp.set_uniform("prev_proj_view_model", prev_projection * prev_view * model);
+    }
+    void geometry_render()
+    {
+        gbuffer_fb.bind();
+        gbuffer_sp.use();
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+        glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1 
+        gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
+
+        model_render(teapot_obj, teapot_model, rusted_iron);
+        model_render(floor_obj, floor_model, rusted_iron);
+        
+        gbuffer_fb.unbind();
+    }    
+
+    void light_render()
+    {
+        // light
+        light_fb.bind();
+        update_viewport();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        light_sp.use();
+        light_sp.set_uniform("eye_position", CAMERA.get_position());
+        light_sp.set_uniform("cube_uv_trans", glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection));        
+        light_sp.active_sampler(0, gbtx_position);
+        light_sp.active_sampler(1, gbtx_albdeo);
+        light_sp.active_sampler(2, gbtx_normal);
+        light_sp.active_sampler(3, gbtx_effects);
+        light_sp.active_sampler(4, convolution_pass, GL_TEXTURE_CUBE_MAP);
+        light_sp.active_sampler(5, prefilter_pass, GL_TEXTURE_CUBE_MAP);
+        light_sp.active_sampler(6, budf_lut);
+        light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
+        VertexArray::render_empty_va();        
+        light_fb.unbind();
+    }
+
+    void postprocess()
+    {
         _motion_blur_pass.execute({light_result_texture, gbtx_effects});
         _color_correction_pass.execute(_motion_blur_pass);
         _fxaa_pass.execute(_color_correction_pass);
         _display_pass.render(_fxaa_pass);
+    }
+
+    virtual void render_loop() override
+    {
+        // projection = get_projection();
+        // view = CAMERA.get_view_matrix();        
+        // geometry_render();
+        // prev_projection = projection;
+        // prev_view = view;
+        // light_render();
+        deffered_render();
+        postprocess();
     }
 
 public:

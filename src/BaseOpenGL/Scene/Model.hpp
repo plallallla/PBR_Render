@@ -7,6 +7,7 @@
 class Model
 {
     std::string _directory;
+    std::vector<Mesh> _meshes;
     void processNode(aiNode* node, const aiScene* scene)
     {
         for (unsigned int i = 0; i < node->mNumMeshes; i++)
@@ -21,11 +22,26 @@ class Model
     }
 
   public:
-    std::vector<Mesh> _meshes;
-    Model(std::string path)
+    Model() = default;
+    void load_single_obj(std::string_view path)
     {
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+        const aiScene* scene = importer.ReadFile(path.data(), aiProcess_Triangulate | aiProcess_FlipUVs |
+             aiProcess_GenSmoothNormals);
+        if(!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+        {
+            LOG.info("ERROR::ASSIMP::" + std::string{importer.GetErrorString()});
+            return;
+        }        
+        _directory = path.substr(0, path.find_last_of('/'));
+        processNode(scene->mRootNode, scene);
+    }
+    void load(std::string_view path)
+    {
+        Assimp::Importer importer;
+        const aiScene* scene = importer.ReadFile(path.data(), 
+            aiProcess_Triangulate | 
+            aiProcess_FlipUVs);
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
         {
             LOG.info("ERROR::ASSIMP::" + std::string{importer.GetErrorString()});

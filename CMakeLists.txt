@@ -6,6 +6,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(src/BaseOpenGL)
+include_directories(src/BaseOpenGL/Memory)
+include_directories(src/BaseOpenGL/Interaction)
+include_directories(src/BaseOpenGL/RenderPass)
+include_directories(src/BaseOpenGL/Light)
+include_directories(src/BaseOpenGL/Scene)
 
 find_package(glad CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
