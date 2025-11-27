@@ -11,6 +11,7 @@ protected:
     GLuint _width;
     GLuint _height;
 public:
+    HAS_RESULT;
     ShaderProgram _sp;
     PostprocessRender(std::string_view frag_path)
     {
@@ -70,9 +71,5 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         VertexArray::render_empty_va();
     }    
-    operator GLuint()
-    {
-        return _result;
-    }
 
 };

@@ -23,6 +23,8 @@ private: \
 
 #include "LogHelper.h"
 
+#define HAS_RESULT operator GLuint() { return _result; }
+
 namespace utility
 {
 

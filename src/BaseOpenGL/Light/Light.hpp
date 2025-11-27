@@ -32,5 +32,6 @@ struct Light
     light_type type;
     glm::vec3 irradiance;
     std::variant<std::monostate, PointLight, SpotLight, DirectionalLight> detail;
+    static glm::mat4 projection_view;
 };
 

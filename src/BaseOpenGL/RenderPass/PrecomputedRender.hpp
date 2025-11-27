@@ -34,13 +34,9 @@ protected:
     GLuint _width;
     GLuint _height;
 public:
+    HAS_RESULT;
     PrecomputedRender(GLuint width = 512, GLuint height = 512) : _width{ width }, _height{ height } {}
     virtual void execute(GLuint input = 0) = 0;
-    operator GLuint()
-    {
-        return _result;
-    }
-
     static inline void render_pipe(GLuint input_texture, std::vector<PrecomputedRender*> renders)
     {
         renders[0]->execute(input_texture);
