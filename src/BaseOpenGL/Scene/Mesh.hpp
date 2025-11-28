@@ -5,17 +5,14 @@
 #include <cstddef>
 #include <vector>
 #include "Buffer.hpp"
-#include "Texture.hpp"
 #include "VertexArray.hpp"
-#include "ShaderProgram.hpp"
 
 class Mesh
 {
     VertexArray _va;
     size_t _elements_ct;
-    std::vector<Texture> _textures;
 public:
-    Mesh(Mesh&& other) noexcept : _va{other._va}, _elements_ct{other._elements_ct}, _textures{other._textures}
+    Mesh(Mesh&& other) noexcept : _va{other._va}, _elements_ct{other._elements_ct}
     {
         other._va._id = 0;
     }
@@ -78,10 +75,6 @@ public:
         GLuint eb = BUFFER.generate_buffer(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data());
         _va.attach_buffer(has_tangent ? PNTTB_LAYOUT : PNT_LAYOUT, vb, eb);
         _elements_ct = indices.size();
-        if (mesh->mMaterialIndex >= 0)
-        {
-            TEXTURE_MANAGER.load_from_material(scene->mMaterials[mesh->mMaterialIndex], _textures, directory);
-        }
     }
 
     void attach_extra_buffer(const BufferLayout& layout, GLuint buffer_id)
@@ -89,25 +82,15 @@ public:
         _va.attach_vertex_buffer(layout, buffer_id);
     }
 
-    void render_elements(const ShaderProgram& shader) const
+    void render_elements() const
     {
-        shader.use();
-        for (int i = 0; i < _textures.size(); i++)
-        {
-            shader.active_sampler(i, _textures[i]);
-        }
         _va.bind();
         glDrawElements(GL_TRIANGLES, _elements_ct, GL_UNSIGNED_INT, 0);
         _va.unbind();
     }
 
-    void render_elements_instanced(const ShaderProgram& shader, GLsizei instance_count) const
+    void render_elements_instanced(GLsizei instance_count) const
     {
-        shader.use();
-        for (int i = 0; i < _textures.size(); i++)
-        {
-            shader.active_sampler(i, _textures[i]);
-        }
         _va.bind();
         glDrawElementsInstanced(GL_TRIANGLES, _elements_ct, GL_UNSIGNED_INT, 0, instance_count);
         _va.unbind();

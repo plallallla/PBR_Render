@@ -29,7 +29,6 @@ protected:
         return glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
     }();
 
-    GLuint _result = 0;
     FrameBuffer _fb;
     GLuint _width;
     GLuint _height;

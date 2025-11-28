@@ -1,27 +1,29 @@
 # PBR_Render
 
-### 0.why
+### 0. why
 
-这是一个基于C++与OpenGL实现的光栅化pbr渲染器，这个项目属于我系统学习图形学光栅化后的第一个综合项目，他可以很好的涵盖之前学习过的大多数知识与技巧，是一次非常好的综合实践。
+这是一个基于C++与OpenGL实现的光栅化的PBR渲染器，基本涵盖了经典教程[LearnOpenGL](https://learnopengl-cn.github.io)中的绝大多数内容，如果你学习完基本的一些图形学知识与教学内容，可以参考这个作为一次综合实践。
 
-### 1.what
+### 1. what
 
 这个项目主要基于***OpenGL 4.0***进行，使用光栅化实现了***微表面模型***的PBR渲染，流程上主要采用了***延迟渲染管线***实现，支持漫反射辐照度 与镜面预卷积的***IBL***。
 
 渲染器主要有以下特性
 
-- 相机
-  - 移动
-  - 放缩
-
-- 纹理
+- Camera
+  - Move
+  - Zoom
+  - TODO:Exposure
+    - Aperture
+    - Shutter speed
+    - ISO
+- Texture
   - Cube
   - HDR
   - 2D
 - 模型
   - .obj
-
-- 材质
+- Material
   - Cook-Torrance BRDF
     - Albedo
     - Normal
@@ -33,34 +35,39 @@
     - diffuse
     - specular
     - shininess
-- Shader
-  - 支持延迟渲染
-  - 支持链式离屏渲染
+- 渲染流程
+  - Deffered
+  - Instance
+  - TODO:forward for transparent
 - IBL
   - Diffuse irradiance
   - Specular IBL
 - Lighting
-  - 方向光源
-  - 点光源
-  - 传统二次衰弱
+  - Directional
+  - Point
+  - TODO:Spot
+  - TODO:Volume Light
   -  *Cook-Torrance* BRDF
-- 天空盒
-  - Cube贴图
-
-- 阴影
-  - shadowmap
-  - PCF软阴影
+- SkyBox
+  - Cube
+- Shadow
+  - 包围球模拟的方向光源
   - 点光源立方体阴影贴图
-- 后处理
-  - SAO
-  - FXAA
-  - Bloom
-  - TODO:Motion blur
+  - 软阴影
+    - PCF
+    - TODO:PCSS
+- Post Process
+  - TODO:SAO
+  - Anti-aliasing
+    - FXAA
+    - TODO:TAA
+  - TODO:Bloom
+  - Motion blur
 - 其他
   - spdlog
   - IMGUI
 
-### 2.how
+### 2. how
 
 $$
 L_o \approx
@@ -89,13 +96,13 @@ TODO：补充实现博客
 - 着色阶段
   - 微表面模型brdf
   - IBL
-  - 光源的设计与实现
+  - 光源与阴影
 
-### 3.reference
+### 3. reference
 
-[前期预研学习项目](https://github.com/plallallla/CG_Demo)
+[练手仓库链接](https://github.com/plallallla/CG_Demo)
 
-学习参考自以下内容
+学习参考自以下内容：
 
 [LearnOpenGL](https://learnopengl-cn.github.io)
 

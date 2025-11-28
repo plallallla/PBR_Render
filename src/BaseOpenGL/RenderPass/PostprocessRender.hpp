@@ -6,12 +6,11 @@
 class PostprocessRender
 {
 protected:
-    GLuint _result = 0;
     FrameBuffer _fb;
     GLuint _width;
     GLuint _height;
-public:
     HAS_RESULT;
+public:
     ShaderProgram _sp;
     PostprocessRender(std::string_view frag_path)
     {

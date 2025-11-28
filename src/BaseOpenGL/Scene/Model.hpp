@@ -2,6 +2,9 @@
 #include <OpenGL/gltypes.h>
 #include <string>
 #include <vector>
+#include <assimp/mesh.h>
+#include <assimp/scene.h>
+#include <Assimp/Importer.hpp>
 #include "Mesh.hpp"
 
 class Model
@@ -26,8 +29,7 @@ class Model
     void load_single_obj(std::string_view path)
     {
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(path.data(), aiProcess_Triangulate | aiProcess_FlipUVs |
-             aiProcess_GenSmoothNormals);
+        const aiScene* scene = importer.ReadFile(path.data(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals);
         if(!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
         {
             LOG.info("ERROR::ASSIMP::" + std::string{importer.GetErrorString()});
@@ -39,9 +41,7 @@ class Model
     void load(std::string_view path)
     {
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(path.data(), 
-            aiProcess_Triangulate | 
-            aiProcess_FlipUVs);
+        const aiScene* scene = importer.ReadFile(path.data(), aiProcess_Triangulate | aiProcess_FlipUVs);
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
         {
             LOG.info("ERROR::ASSIMP::" + std::string{importer.GetErrorString()});
@@ -57,18 +57,18 @@ class Model
             _meshes[i].attach_extra_buffer(layout, buffer_id);
         }
     }
-    void render_elements(const ShaderProgram& shader)
+    void render_elements()
     {
         for (unsigned int i = 0; i < _meshes.size(); i++)
         {
-            _meshes[i].render_elements(shader);
+            _meshes[i].render_elements();
         }
     }
-    void render_elements_instanced(const ShaderProgram& shader, GLsizei instance_count) const
+    void render_elements_instanced(GLsizei instance_count) const
     {
         for (unsigned int i = 0; i < _meshes.size(); i++)
         {
-            _meshes[i].render_elements_instanced(shader, instance_count);
+            _meshes[i].render_elements_instanced(instance_count);
         }
     }
 };

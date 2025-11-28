@@ -9,47 +9,47 @@
 
 class Shadow
 {
-    GLuint _result;
     FrameBuffer _fb;
     light_type _type;
     GLuint _width;
     GLuint _height;
-    std::shared_ptr<ShaderProgram> sp;
     glm::vec3 light_geometry;
-    inline static std::shared_ptr<ShaderProgram> _directional_sp = [] () -> std::shared_ptr<ShaderProgram>
+    inline static std::shared_ptr<ShaderProgram> get_directional_sp() 
     {
-        ShaderProgram sp
-        { 
-            SHADERS_PATH + "shadow/directional.vert", 
-            SHADERS_PATH + "post_process/directional.frag" 
-        };
-        return std::make_shared<ShaderProgram>(sp);
-    }();
-    inline static std::shared_ptr<ShaderProgram> _point_sp = [] () -> std::shared_ptr<ShaderProgram>
+        static auto instance = std::make_shared<ShaderProgram>
+        (
+            SHADERS_PATH + "shadow/directional.vert",
+            SHADERS_PATH + "post_process/directional.frag"
+        );
+        return instance;
+    }
+
+    inline static std::shared_ptr<ShaderProgram> get_point_sp() 
     {
-        ShaderProgram sp
-        { 
+        static auto instance = std::make_shared<ShaderProgram>
+        (
             SHADERS_PATH + "shadow/point.vert", 
             SHADERS_PATH + "shadow/point.geom", 
             SHADERS_PATH + "post_process/point.frag" 
-        };
-        return std::make_shared<ShaderProgram>(sp);
-    }();
+        );
+        return instance;
+    }
 
 public:
     HAS_RESULT;
+    std::shared_ptr<ShaderProgram> _sp;
     Shadow(const Light& l, GLuint width, GLuint height) : _type{l.type}, _width{width}, _height{height}
     {
         _fb.bind();
         if (l.type == light_type::directional)
         {
-            sp = _directional_sp;
+            _sp = get_directional_sp();
             light_geometry = std::get<DirectionalLight>(l.detail).direction;
             _result = TEXTURE_MANAGER.generate_texture_buffer(width, height, TEXTURE_2D_DEPTH);
         }
         else if (l.type == light_type::point)
         {
-            sp = _point_sp;
+            _sp = get_point_sp();
             light_geometry = std::get<PointLight>(l.detail).position;
             _result = TEXTURE_MANAGER.generate_cube_texture_buffer(width, height, TEXTURE_CUBE_DEPTH);
         }
@@ -58,13 +58,13 @@ public:
         _fb.unbind();
     }
     
-    void begin(const Light& l)
+    void begin()
     {
         glViewport(0, 0, _width, _height);
         _fb.bind();
         glClear(GL_DEPTH_BUFFER_BIT);
-        sp->use();
-        if (l.type == light_type::directional)
+        _sp->use();
+        if (_type == light_type::directional)
         {
             float scene_radius = 30.0f; 
             glm::vec3 scene_center = glm::vec3(0.0, 0.0, 0.0);
@@ -75,19 +75,19 @@ public:
             glm::vec3 light_pos = scene_center - direction * (scene_radius * 2.0f);
             glm::mat4 view = glm::lookAt(light_pos, scene_center, up);
             glm::mat4 projection = glm::ortho(-scene_radius, scene_radius, -scene_radius, scene_radius, .1f, scene_radius * 4.0f);
-            sp->set_uniform("projection_view", projection * view);
+            _sp->set_uniform("projection_view", projection * view);
         }
-        else if (l.type == light_type::point)
+        else if (_type == light_type::point)
         {
             glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)_width / (float)_height, .1f, 25.0f);
-            sp->set_uniform("shadowMatrices[" + std::to_string(0) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-            sp->set_uniform("shadowMatrices[" + std::to_string(1) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-            sp->set_uniform("shadowMatrices[" + std::to_string(2) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-            sp->set_uniform("shadowMatrices[" + std::to_string(3) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-            sp->set_uniform("shadowMatrices[" + std::to_string(4) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-            sp->set_uniform("shadowMatrices[" + std::to_string(5) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-            sp->set_uniform("far_plane", 25.0f);
-            sp->set_uniform("position", light_geometry);
+            _sp->set_uniform("shadowMatrices[" + std::to_string(0) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            _sp->set_uniform("shadowMatrices[" + std::to_string(1) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            _sp->set_uniform("shadowMatrices[" + std::to_string(2) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+            _sp->set_uniform("shadowMatrices[" + std::to_string(3) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+            _sp->set_uniform("shadowMatrices[" + std::to_string(4) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            _sp->set_uniform("shadowMatrices[" + std::to_string(5) + "]", projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            _sp->set_uniform("far_plane", 25.0f);
+            _sp->set_uniform("position", light_geometry);
         }
     }
 

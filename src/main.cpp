@@ -3,7 +3,7 @@
 #include "PrecomputedRender.hpp"
 #include "PostprocessRender.hpp"
 #include "ShaderProgram.hpp"
-#include "Shape.hpp"
+#include "Shadow.hpp"
 #include "SkyboxRender.hpp"
 #include "Material.hpp"
 #include "VertexArray.hpp"
@@ -57,6 +57,14 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "render/light.frag" 
     };
 
+    Light direction_light
+    {
+        light_type::directional,
+        glm::vec3(10.0, 10.0, 10.0),
+        DirectionalLight{glm::vec3(1.0, 1.0, 1.0)}
+    };    
+    Shadow direction_shadow{direction_light, 1024, 1024};    
+
     // gbuffer资源
     FrameBuffer gbuffer_fb;
     GLuint depth_texture;
@@ -75,18 +83,6 @@ class PBR_render : public GLWidget
     PostprocessRender _color_correction_pass{ SHADERS_PATH + "post_process/color_correction.frag" };
     PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
     PostprocessRender _motion_blur_pass{ SHADERS_PATH + "post_process/motion_blur.frag" };
-
-    ShaderProgram _debug_gbuffer_sp
-    {
-        SHADERS_PATH + "deffered/gbuffer.vert",
-        SHADERS_PATH + "deffered/gbuffer.frag" 
-    };    
-    
-    ShaderProgram _debug_light_sp
-    {
-        SHADERS_PATH + "common_vertex/quad.vert",
-        SHADERS_PATH + "deffered/light.frag" 
-    };       
 
     // glm::mat4 prev_proj_view_model;
     glm::mat4 projection;
@@ -134,14 +130,6 @@ class PBR_render : public GLWidget
         gbuffer_fb.checkFramebufferStatus();
         gbuffer_fb.unbind();
 
-        _debug_light_sp.use();
-        _debug_light_sp.set_sampler(0, "s_position");
-        _debug_light_sp.set_sampler(1, "s_normal");
-        _debug_light_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
-        _debug_light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
-        _debug_light_sp.set_uniform("projection", get_projection());          
-
-
         // gbuffer
         Material::set_samplers(gbuffer_sp, 0);
              
@@ -176,6 +164,13 @@ class PBR_render : public GLWidget
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
 
+        direction_shadow.begin();
+        direction_shadow._sp->set_uniform("model", teapot_model);
+        teapot_obj.render_elements();
+        direction_shadow._sp->set_uniform("model", floor_model);
+        floor_obj.render_elements();
+        direction_shadow.end();
+
     }
 
     void render_object(Model& m, const glm::mat4 model, const Material& material)
@@ -187,7 +182,7 @@ class PBR_render : public GLWidget
         gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
         gbuffer_sp.set_uniform("prev_proj_view_model", prev_projection * prev_view * model);
         material.active(0);
-        m.render_elements(gbuffer_sp);        
+        m.render_elements();        
     }
 
     void model_render(const Model& m, const glm::mat4& model, Material& material)
@@ -218,22 +213,6 @@ class PBR_render : public GLWidget
         gbuffer_fb.unbind();
         prev_projection = projection;
         prev_view = view;
-
-        // gbuffer_fb.bind();
-        // gbuffer_sp.use();
-        // glEnable(GL_DEPTH_TEST);
-        // glDepthMask(GL_TRUE);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // glEnable(GL_CULL_FACE);
-        // glCullFace(GL_BACK);
-        // static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-        // glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1 
-        // gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
-
-        // model_render(teapot_obj, teapot_model, rusted_iron);
-        // model_render(floor_obj, floor_model, rusted_iron);
-        
-        // gbuffer_fb.unbind();
     }    
 
     void light_render()
@@ -272,10 +251,10 @@ class PBR_render : public GLWidget
         // geometry_render();
 
         // deffered_render();
-        geometry_render();
-        light_render();
-        postprocess();
-        std::cout << CAMERA.get_position().x << " " << CAMERA.get_position().y << " " << CAMERA.get_position().z << std::endl;
+        // geometry_render();
+        // light_render();
+        // postprocess();
+        _display_pass.render(direction_shadow);
     }
 
 public:
