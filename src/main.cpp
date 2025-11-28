@@ -233,10 +233,10 @@ class PBR_render : public GLWidget
     virtual void render_loop() override
     {
         // deffered_render();
-        geometry_render();
-        light_render();
-        postprocess();
-        // _display_pass.render(direction_shadow);
+        // geometry_render();
+        // light_render();
+        // postprocess();
+        _display_pass.render(direction_shadow);
     }
 
 public:
