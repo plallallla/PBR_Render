@@ -63,7 +63,7 @@ public:
     {
         _sp.load_vs_src(default_vs_src);
         _sp.load_fs_src(default_fs_src);
-        _sp.link();
+        _sp.link("SkyboxRender");
         set_up_va();
     }
     void render_texture(GLuint texture, glm::mat4 projection)

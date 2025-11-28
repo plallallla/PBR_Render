@@ -14,24 +14,6 @@
 
 #include "Model.hpp"
 
-
-std::vector<glm::vec3> lightPositions
-{
-    glm::vec3(-10.0f,  10.0f, 10.0f),
-    glm::vec3( 10.0f,  10.0f, 10.0f),
-    glm::vec3(-10.0f, -10.0f, 10.0f),
-    glm::vec3( 10.0f, -10.0f, 10.0f),
-};
-std::vector<glm::vec3> lightColors
-{
-    glm::vec3(300.0f, 300.0f, 300.0f),
-    glm::vec3(300.0f, 300.0f, 300.0f),
-    glm::vec3(300.0f, 300.0f, 300.0f),
-    glm::vec3(300.0f, 300.0f, 300.0f)
-};
-
-
-
 class PBR_render : public GLWidget
 {
 
@@ -165,10 +147,12 @@ class PBR_render : public GLWidget
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
 
         direction_shadow.begin();
+
         direction_shadow._sp->set_uniform("model", teapot_model);
         teapot_obj.render_elements();
         direction_shadow._sp->set_uniform("model", floor_model);
         floor_obj.render_elements();
+        
         direction_shadow.end();
 
     }
@@ -248,13 +232,11 @@ class PBR_render : public GLWidget
 
     virtual void render_loop() override
     {
-        // geometry_render();
-
         // deffered_render();
-        // geometry_render();
-        // light_render();
-        // postprocess();
-        _display_pass.render(direction_shadow);
+        geometry_render();
+        light_render();
+        postprocess();
+        // _display_pass.render(direction_shadow);
     }
 
 public:

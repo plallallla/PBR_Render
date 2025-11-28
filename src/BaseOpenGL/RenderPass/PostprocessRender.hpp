@@ -16,7 +16,7 @@ public:
     {
         _sp.load_vs_file(SHADERS_PATH + "post_process/quad.vert");
         _sp.load_fs_file(frag_path);
-        _sp.link();
+        _sp.link(frag_path);
     }
     void set(GLuint width, GLuint height, const TextureAttributes& attributes = TEXTURE_2D_RGBA)
     {

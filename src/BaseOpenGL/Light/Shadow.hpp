@@ -19,7 +19,7 @@ class Shadow
         static auto instance = std::make_shared<ShaderProgram>
         (
             SHADERS_PATH + "shadow/directional.vert",
-            SHADERS_PATH + "post_process/directional.frag"
+            SHADERS_PATH + "shadow/directional.frag"
         );
         return instance;
     }
@@ -30,7 +30,7 @@ class Shadow
         (
             SHADERS_PATH + "shadow/point.vert", 
             SHADERS_PATH + "shadow/point.geom", 
-            SHADERS_PATH + "post_process/point.frag" 
+            SHADERS_PATH + "shadow/point.frag" 
         );
         return instance;
     }
@@ -61,12 +61,13 @@ public:
     void begin()
     {
         glViewport(0, 0, _width, _height);
+        glDepthMask(GL_TRUE);
         _fb.bind();
         glClear(GL_DEPTH_BUFFER_BIT);
         _sp->use();
         if (_type == light_type::directional)
         {
-            float scene_radius = 30.0f; 
+            float scene_radius = 10.0f; 
             glm::vec3 scene_center = glm::vec3(0.0, 0.0, 0.0);
             glm::vec3 direction = glm::normalize(light_geometry);
             // 防止 up 向量与 lightDir 共线（如正午太阳）

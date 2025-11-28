@@ -1,6 +1,7 @@
 #pragma once
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include <string>
 #include <string_view>
 
 #include "Shader.hpp"
@@ -30,7 +31,7 @@ public:
         _id = glCreateProgram();
         load_shader_file(GL_VERTEX_SHADER, vs);
         load_shader_file(GL_FRAGMENT_SHADER, fs);
-        link();
+        link(std::string{vs}  + " " + std::string{fs});
     }
 
     ShaderProgram(std::string_view vs, std::string_view gs,std::string_view fs)
@@ -39,7 +40,7 @@ public:
         load_shader_file(GL_VERTEX_SHADER, vs);
         load_shader_file(GL_GEOMETRY_SHADER, gs);
         load_shader_file(GL_FRAGMENT_SHADER, fs);
-        link();
+        link(std::string{vs} + " " + std::string{gs} + " " + std::string{fs});
     }
 
     ~ShaderProgram()
@@ -74,10 +75,16 @@ public:
     inline GLuint get_id() const { return _id; };
     inline void use() const { glUseProgram(_id); }
 
-    void link()
+    void link(std::string_view info)
     {
         glLinkProgram(_id);
-        utility::checkCompileErrors(_id, "PROGRAME");
+        GLchar infoLog[1024];
+        if (!utility::checkCompileErrors(_id, std::string{"PROGRAME:"}))
+        {
+            glGetShaderInfoLog(_id, 1024, NULL, infoLog);
+            LOG.info(std::string{"\nSHADER_LINK_ERROR of type["} + info.data() + "]\n" + infoLog);
+            // throw std::runtime_error("\nSHADER_COMPILATION_ERROR of type: " + info.data());
+        }
     }
 
     void active_sampler(int offset, GLuint texture, GLenum target = GL_TEXTURE_2D) const
