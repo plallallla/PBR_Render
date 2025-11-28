@@ -1,4 +1,5 @@
 #include "Camera.hpp"
+#include "FrameBuffer.hpp"
 #include "GLWidget.hpp"
 #include "PrecomputedRender.hpp"
 #include "PostprocessRender.hpp"
@@ -6,6 +7,8 @@
 #include "Shadow.hpp"
 #include "SkyboxRender.hpp"
 #include "Material.hpp"
+#include "Texture.hpp"
+#include "TextureAttributes.hpp"
 #include "VertexArray.hpp"
 #include "utility.hpp"
 #include <glm/ext/matrix_transform.hpp>
@@ -45,7 +48,7 @@ class PBR_render : public GLWidget
         glm::vec3(10.0, 10.0, 10.0),
         DirectionalLight{glm::vec3(1.0, 1.0, 1.0)}
     };    
-    Shadow direction_shadow{direction_light, 1024, 1024};    
+    Shadow direction_shadow{direction_light, 2048, 2048};    
 
     // gbuffer资源
     FrameBuffer gbuffer_fb;
@@ -65,6 +68,7 @@ class PBR_render : public GLWidget
     PostprocessRender _color_correction_pass{ SHADERS_PATH + "post_process/color_correction.frag" };
     PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
     PostprocessRender _motion_blur_pass{ SHADERS_PATH + "post_process/motion_blur.frag" };
+    PostprocessRender _depth24_debug{ SHADERS_PATH + "post_process/depth24_debug.frag" };
 
     // glm::mat4 prev_proj_view_model;
     glm::mat4 projection;
@@ -76,6 +80,17 @@ class PBR_render : public GLWidget
     glm::mat4 teapot_model;
     Model floor_obj;
     glm::mat4 floor_model;
+
+    ShaderProgram shadow_sp
+    {
+        SHADERS_PATH + "shadow/directional.vert",
+        SHADERS_PATH + "shadow/directional.frag"
+    };
+
+    // shadow debug
+    FrameBuffer fb;
+    GLuint depth;
+    GLuint color;
 
     virtual void application() override
     {
@@ -155,6 +170,31 @@ class PBR_render : public GLWidget
         
         direction_shadow.end();
 
+        shadow_sp.use();
+        auto light_geometry = std::get<DirectionalLight>(direction_light.detail).direction;
+        float scene_radius = 10.0f; 
+        glm::vec3 scene_center = glm::vec3(0.0, 0.0, 0.0);
+        glm::vec3 direction = glm::normalize(light_geometry);
+        // 防止 up 向量与 lightDir 共线（如正午太阳）
+        glm::vec3 up = std::abs(direction.y) > 0.99f ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);            
+        // 固定包围球来模拟平行光位置
+        glm::vec3 light_pos = scene_center - direction * (scene_radius * 2.0f);
+        glm::mat4 view = glm::lookAt(light_pos, scene_center, up);
+        glm::mat4 projection = glm::ortho(-scene_radius, scene_radius, -scene_radius, scene_radius, .1f, scene_radius * 4.0f);
+        shadow_sp.set_uniform("projection_view", projection * view);        
+        shadow_sp.set_uniform("model", teapot_model);   
+        
+        // shadow
+
+        depth = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_DEPTH);
+        color = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA);        
+        fb.bind();
+        glViewport(0, 0, 1024, 1024);          
+        fb.attach_depth_texture(depth);
+        fb.attach_color_texture(0, color);
+        fb.active_draw_buffers({GL_COLOR_ATTACHMENT0});
+        fb.unbind();   
+
     }
 
     void render_object(Model& m, const glm::mat4 model, const Material& material)
@@ -218,9 +258,10 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(5, prefilter_pass, GL_TEXTURE_CUBE_MAP);
         light_sp.active_sampler(6, budf_lut);
         light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
-        VertexArray::render_empty_va();        
-        light_fb.unbind();
+        VertexArray::render_empty_va();     
+        light_fb.unbind();     
     }
+
 
     void postprocess()
     {
@@ -232,11 +273,26 @@ class PBR_render : public GLWidget
 
     virtual void render_loop() override
     {
-        // deffered_render();
         // geometry_render();
         // light_render();
         // postprocess();
-        _display_pass.render(direction_shadow);
+        // _display_pass.render(_fxaa_pass);
+        // _display_pass.render(direction_shadow);
+
+        glViewport(0, 0, 1024, 1024);          
+        fb.bind();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);        
+        // glCullFace(GL_FRONT);//改变面剔除以解决阴影悬浮问题
+        shadow_sp.use();
+        Shape::render_sphere();
+        // glCullFace(GL_BACK); //不要忘记设回原先的面剔除
+        fb.unbind();   
+        update_viewport();
+        // _display_pass.render(depth);
+        _depth24_debug.render(depth);
+
     }
 
 public:
