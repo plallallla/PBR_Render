@@ -46,7 +46,7 @@ class PBR_render : public GLWidget
     {
         light_type::directional,
         glm::vec3(10.0, 10.0, 10.0),
-        DirectionalLight{glm::vec3(1.0, 1.0, 1.0)}
+        DirectionalLight{glm::vec3(-1.0, -1.0, -1.0)}
     };    
     Shadow direction_shadow{direction_light, 2048, 2048};    
 
@@ -90,7 +90,7 @@ class PBR_render : public GLWidget
     // shadow debug
     FrameBuffer fb;
     GLuint depth;
-    GLuint color;
+    GLuint depth_color;
 
     virtual void application() override
     {
@@ -172,7 +172,7 @@ class PBR_render : public GLWidget
 
         shadow_sp.use();
         auto light_geometry = std::get<DirectionalLight>(direction_light.detail).direction;
-        float scene_radius = 10.0f; 
+        float scene_radius = 15.0f; 
         glm::vec3 scene_center = glm::vec3(0.0, 0.0, 0.0);
         glm::vec3 direction = glm::normalize(light_geometry);
         // 防止 up 向量与 lightDir 共线（如正午太阳）
@@ -180,20 +180,33 @@ class PBR_render : public GLWidget
         // 固定包围球来模拟平行光位置
         glm::vec3 light_pos = scene_center - direction * (scene_radius * 2.0f);
         glm::mat4 view = glm::lookAt(light_pos, scene_center, up);
-        glm::mat4 projection = glm::ortho(-scene_radius, scene_radius, -scene_radius, scene_radius, .1f, scene_radius * 4.0f);
+        glm::mat4 projection = glm::ortho(-scene_radius, scene_radius, -scene_radius, scene_radius, .1f, scene_radius * 5.0f);
         shadow_sp.set_uniform("projection_view", projection * view);        
         shadow_sp.set_uniform("model", teapot_model);   
         
         // shadow
 
         depth = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_DEPTH);
-        color = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA);        
+        // color = TEXTURE_MANAGER.generate_texture_buffer(scrWidth, scrHeight, TEXTURE_2D_RGBA);
         fb.bind();
-        glViewport(0, 0, 1024, 1024);          
+        update_viewport();
         fb.attach_depth_texture(depth);
-        fb.attach_color_texture(0, color);
-        fb.active_draw_buffers({GL_COLOR_ATTACHMENT0});
-        fb.unbind();   
+        fb.set_draw_read(GL_NONE, GL_NONE);
+        // fb.attach_color_texture(0, color);
+        // fb.active_draw_buffers({GL_COLOR_ATTACHMENT0});
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);        
+        // glCullFace(GL_FRONT);//改变面剔除以解决阴影悬浮问题
+        shadow_sp.use();
+
+        shadow_sp.set_uniform("model", teapot_model);
+        teapot_obj.render_elements();
+        shadow_sp.set_uniform("model", floor_model);
+        floor_obj.render_elements();        
+
+        // glCullFace(GL_BACK); //不要忘记设回原先的面剔除
+        fb.unbind();           
 
     }
 
@@ -279,19 +292,11 @@ class PBR_render : public GLWidget
         // _display_pass.render(_fxaa_pass);
         // _display_pass.render(direction_shadow);
 
-        glViewport(0, 0, 1024, 1024);          
-        fb.bind();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_TRUE);        
-        // glCullFace(GL_FRONT);//改变面剔除以解决阴影悬浮问题
-        shadow_sp.use();
-        Shape::render_sphere();
-        // glCullFace(GL_BACK); //不要忘记设回原先的面剔除
-        fb.unbind();   
+
         update_viewport();
         // _display_pass.render(depth);
         _depth24_debug.render(depth);
+        // _depth24_debug.render(direction_shadow);
 
     }
 
