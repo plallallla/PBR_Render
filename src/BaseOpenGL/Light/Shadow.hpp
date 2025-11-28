@@ -60,14 +60,15 @@ public:
     
     void begin()
     {
-        glViewport(0, 0, _width, _height);
-        glDepthMask(GL_TRUE);
         _fb.bind();
+        glViewport(0, 0, _width, _height);
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
         glClear(GL_DEPTH_BUFFER_BIT);
         _sp->use();
         if (_type == light_type::directional)
         {
-            float scene_radius = 10.0f; 
+            float scene_radius = 15.0f; 
             glm::vec3 scene_center = glm::vec3(0.0, 0.0, 0.0);
             glm::vec3 direction = glm::normalize(light_geometry);
             // 防止 up 向量与 lightDir 共线（如正午太阳）
@@ -75,7 +76,7 @@ public:
             // 固定包围球来模拟平行光位置
             glm::vec3 light_pos = scene_center - direction * (scene_radius * 2.0f);
             glm::mat4 view = glm::lookAt(light_pos, scene_center, up);
-            glm::mat4 projection = glm::ortho(-scene_radius, scene_radius, -scene_radius, scene_radius, .1f, scene_radius * 4.0f);
+            glm::mat4 projection = glm::ortho(-scene_radius, scene_radius, -scene_radius, scene_radius, .1f, scene_radius * 5.0f);
             _sp->set_uniform("projection_view", projection * view);
         }
         else if (_type == light_type::point)

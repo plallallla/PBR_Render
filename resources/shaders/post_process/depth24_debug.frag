@@ -6,7 +6,7 @@ in vec2 uv;
 uniform sampler2D screenTexture;
 
 const float near_plane = 0.1;
-const float far_plane = 40.0;
+const float far_plane = 75.0;
 
 float LinearizeDepth(float depth)
 {
