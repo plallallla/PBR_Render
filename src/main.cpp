@@ -46,7 +46,7 @@ class PBR_render : public GLWidget
     {
         light_type::directional,
         glm::vec3(10.0, 10.0, 10.0),
-        DirectionalLight{glm::vec3(-1.0, -1.0, -1.0)}
+        DirectionalLight{glm::vec3(1.0, 1.0, 1.0)}
     };    
     Shadow direction_shadow{direction_light, 2048, 2048};    
 
@@ -134,6 +134,7 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(5, "ibl_prefilter");
         light_sp.set_sampler(6, "ibl_brdf_lut");
         light_sp.set_sampler(7, "env_cube");     
+        light_sp.set_sampler(8, "d_shadow_text");
         light_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
         light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
 
@@ -215,6 +216,8 @@ class PBR_render : public GLWidget
         light_sp.use();
         light_sp.set_uniform("eye_position", CAMERA.get_position());
         light_sp.set_uniform("cube_uv_trans", glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection));        
+        light_sp.set_uniform("fragment_size", glm::vec2(1.0 / _width, 1.0 / _height));
+        light_sp.set_uniform("d_light_matrix", (glm::mat4)direction_shadow.get_light_matrix());
         light_sp.active_sampler(0, gbtx_position);
         light_sp.active_sampler(1, gbtx_albdeo);
         light_sp.active_sampler(2, gbtx_normal);
@@ -223,6 +226,7 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(5, prefilter_pass, GL_TEXTURE_CUBE_MAP);
         light_sp.active_sampler(6, budf_lut);
         light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
+        light_sp.active_sampler(8, direction_shadow);
         VertexArray::render_empty_va();     
         light_fb.unbind();     
     }
@@ -238,11 +242,11 @@ class PBR_render : public GLWidget
 
     virtual void render_loop() override
     {
-    //     geometry_render();
-    //     light_render();
-    //     postprocess();
-    //     _display_pass.render(_fxaa_pass);
-        _depth24_debug.render(direction_shadow);
+        geometry_render();
+        light_render();
+        postprocess();
+        _display_pass.render(_fxaa_pass);
+        // _depth24_debug.render(direction_shadow);
     }
 
 public:

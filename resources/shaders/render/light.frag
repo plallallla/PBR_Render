@@ -3,7 +3,7 @@
 in vec2 uv;
 in vec3 cube_uv;
 
-out vec4 frag_color;
+out vec4 fragment_color;
 
 uniform sampler2D s_position;
 uniform sampler2D s_albedo;
@@ -15,6 +15,58 @@ uniform sampler2D ibl_brdf_lut;
 uniform samplerCube env_cube;
 
 uniform vec3 eye_position;
+
+struct DirectionLight
+{
+    vec3 direction;
+    vec3 color;
+};
+uniform DirectionLight d_light;
+uniform sampler2D d_shadow_text;
+uniform mat4 d_light_matrix;
+
+uniform vec2 fragment_size;
+
+struct PointLight
+{
+    vec3 position;
+    vec3 color;
+    float constant;
+    float linear;
+    float quadratic;
+};
+uniform PointLight p_light[4];
+
+const float near_plane = 0.1;
+const float far_plane = 75.0;
+float LinearizeDepth(float depth)
+{
+    float z = depth * 2.0 - 1.0; // Back to NDC 
+    return (2.0 * near_plane * far_plane) / (far_plane + near_plane - z * (far_plane - near_plane));	
+}
+
+float directional_shadow(vec3 world_pos, float bias)
+{
+    vec4 frag_light_pos = d_light_matrix * vec4(world_pos, 1.0);
+    frag_light_pos = frag_light_pos / frag_light_pos.w;
+    frag_light_pos = frag_light_pos * 0.5 + 0.5;
+    // 裁剪空间外的点不受阴影影响（或视为不在阴影中）
+    if (frag_light_pos.z > 1.0 || frag_light_pos.x < 0.0 || frag_light_pos.x > 1.0 || frag_light_pos.y < 0.0 || frag_light_pos.y > 1.0)
+    {
+        return 1.0; // 无阴影
+    }
+    float shadow = 0.0;
+    for (int x = -1; x < 2; x++)
+    {
+        for (int y = -1; y < 2; y++)
+        {
+            vec2 offset = vec2(x, y) * fragment_size;
+            float pcf_depth = texture(d_shadow_text, frag_light_pos.xy + offset).r;
+            shadow += frag_light_pos.z > pcf_depth + bias ? 1.0 : 0.0;
+        }
+    }
+    return 1.0 - (shadow / 9);
+}
 
 const float PI = 3.14159265359;
 const float MAX_REFLECTION_LOD = 4.0;
@@ -91,30 +143,13 @@ vec3 indirect_irradiance(vec3 N, vec3 V, vec3 albedo, vec3 F0, float roughness, 
     return diffuse + specular;
 }
 
-struct DirectionLight
-{
-    vec3 direction;
-    vec3 color;
-};
-uniform DirectionLight d_light;
-
-struct PointLight
-{
-    vec3 position;
-    vec3 color;
-    float constant;
-    float linear;
-    float quadratic;
-};
-uniform PointLight p_light[4];
-
 void main()
 {
     // skybox
     float depth = texture(s_position, uv).w;
     if (depth == 1) 
     {
-        frag_color = texture(env_cube, cube_uv);
+        fragment_color = texture(env_cube, cube_uv);
         return;
     }
     // read gbuffer
@@ -134,7 +169,9 @@ void main()
     vec3 L = normalize(d_light.direction);
     vec3 H = normalize(V + L);
     vec3 radiance = d_light.color;
-    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);
+    float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
+    float visibility = directional_shadow(world_space_position, bias);
+    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
     // point light
     for (int i = 0; i < 4; i++)
     {
@@ -149,6 +186,6 @@ void main()
     float ao = texture(s_effects, uv).r;
     vec3 ibl = indirect_irradiance(N, V, albedo, F0, roughness, metallic, ao);
     // mix
-    frag_color = vec4(Lo + ibl, 1.0);
+    fragment_color = vec4(Lo + ibl, 1.0);
     return;
 }
