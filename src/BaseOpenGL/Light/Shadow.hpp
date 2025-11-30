@@ -53,6 +53,7 @@ public:
             light_geometry.y *= -1.0;
             light_geometry.z *= -1.0;
             _result = TEXTURE_MANAGER.generate_texture_buffer(width, height, TEXTURE_2D_DEPTH);
+            _fb.attach_depth_texture(_result);
             float scene_radius = 15.0f; 
             glm::vec3 scene_center = glm::vec3(0.0, 0.0, 0.0);
             glm::vec3 direction = glm::normalize(light_geometry);
@@ -69,6 +70,7 @@ public:
             _sp = get_point_sp();
             light_geometry = std::get<PointLight>(l.detail).position;
             _result = TEXTURE_MANAGER.generate_cube_texture_buffer(width, height, TEXTURE_CUBE_DEPTH);
+            _fb.attach_depth_texture_array(_result);
             glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)_width / (float)_height, .1f, 25.0f);
             projection_view[0] = projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
             projection_view[1] = projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
@@ -77,14 +79,13 @@ public:
             projection_view[4] = projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
             projection_view[5] = projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f));            
         }
-        _fb.attach_depth_texture(_result);
-        _fb.set_draw_read(GL_NONE, GL_NONE);        
         _fb.unbind();
     }
     
     void begin()
     {
         _fb.bind();
+        _fb.set_draw_read(GL_NONE, GL_NONE);
         glViewport(0, 0, _width, _height);
         glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_TRUE);

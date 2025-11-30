@@ -12,6 +12,7 @@ protected:
     HAS_RESULT;
 public:
     ShaderProgram _sp;
+    bool _enable{ false };
     PostprocessRender(std::string_view frag_path)
     {
         _sp.load_vs_file(SHADERS_PATH + "post_process/quad.vert");

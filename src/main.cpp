@@ -56,6 +56,7 @@ class PBR_render : public GLWidget
         glm::vec3(4.0, 4.0, 4.0),
         PointLight{glm::vec3(-1.0, 1.0, 1.0), {0.0, 1.0, 0.1}}
     };
+    Shadow point_shadow{point_light, 2048, 2048};    
 
     // gbuffer资源
     FrameBuffer gbuffer_fb;
@@ -87,6 +88,17 @@ class PBR_render : public GLWidget
     glm::mat4 teapot_model;
     Model floor_obj;
     glm::mat4 floor_model;
+
+
+    // point shadow
+    FrameBuffer frame;
+    ShaderProgram point_depth_shader
+    {
+        SHADERS_PATH + "shadow/point.vert", 
+        SHADERS_PATH + "shadow/point.geom", 
+        SHADERS_PATH + "shadow/point.frag"         
+    };    
+    GLuint point_shadow_text = TEXTURE_MANAGER.generate_cube_texture_buffer(1024, 1024);    
 
     virtual void application() override
     {
@@ -155,23 +167,62 @@ class PBR_render : public GLWidget
         _color_correction_pass.set(_width, _height);
         _depth24_debug.set(_width, _height);
 
+        _fxaa_pass._enable = true;
         _fxaa_pass.set(_width, _height);
         _fxaa_pass._sp.use();
         _fxaa_pass._sp.set_uniform("frag_size", glm::vec2(1.0 / _width, 1.0 / _height));
 
+        _motion_blur_pass._enable = false;
         _motion_blur_pass.set(_width, _height);
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
 
+        // 计算阴影
         direction_shadow.begin();
-
         direction_shadow._sp->set_uniform("model", teapot_model);
         teapot_obj.render_elements();
         direction_shadow._sp->set_uniform("model", floor_model);
         floor_obj.render_elements();
-        
         direction_shadow.end();
+
+        point_shadow.begin();
+        point_shadow._sp->set_uniform("model", teapot_model);
+        teapot_obj.render_elements();
+        point_shadow._sp->set_uniform("model", floor_model);
+        floor_obj.render_elements();
+        point_shadow.end();
+
+
+        // 0. create depth cubemap transformation matrices
+        // -----------------------------------------------
+        float near_plane = 1.0f;
+        float far_plane = 25.0f;
+        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)1024 / (float)1024, near_plane, far_plane);
+        std::vector<glm::mat4> shadowTransforms;
+        shadowTransforms.push_back(shadowProj * glm::lookAt(std::get<PointLight>(point_light.detail).position, std::get<PointLight>(point_light.detail).position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(std::get<PointLight>(point_light.detail).position, std::get<PointLight>(point_light.detail).position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(std::get<PointLight>(point_light.detail).position, std::get<PointLight>(point_light.detail).position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(std::get<PointLight>(point_light.detail).position, std::get<PointLight>(point_light.detail).position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(std::get<PointLight>(point_light.detail).position, std::get<PointLight>(point_light.detail).position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(std::get<PointLight>(point_light.detail).position, std::get<PointLight>(point_light.detail).position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        glViewport(0, 0, 1024, 1024);
+        frame.bind();
+        glClear(GL_DEPTH_BUFFER_BIT);
+        point_depth_shader.use();
+        for (unsigned int i = 0; i < 6; ++i)
+        {
+            point_depth_shader.set_uniform("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+        }
+        point_depth_shader.set_uniform("far_plane", far_plane);
+        point_depth_shader.set_uniform("lightPos", std::get<PointLight>(point_light.detail).position);
+        glCullFace(GL_FRONT);//改变面剔除以解决阴影悬浮问题
+        point_depth_shader.set_uniform("model", teapot_model);
+        teapot_obj.render_elements();
+        point_depth_shader.set_uniform("model", floor_model);
+        floor_obj.render_elements();
+        glCullFace(GL_BACK);//改变面剔除以解决阴影悬浮问题
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);        
 
     }
 
@@ -243,19 +294,16 @@ class PBR_render : public GLWidget
         light_fb.unbind();     
     }
 
-    bool enable_motion_blur{ false };
-    bool enable_fxaa{ true };
-
     void postprocess()
     {
         auto final = light_result_texture;
-        if (enable_motion_blur)
+        if (_motion_blur_pass._enable)
         {
             _motion_blur_pass.execute({final, gbtx_effects});
             final = _motion_blur_pass;
         }
         _color_correction_pass.execute(final);
-        if (enable_fxaa)
+        if (_fxaa_pass._enable)
         {
             _fxaa_pass.execute(_color_correction_pass);
             final = _fxaa_pass;
