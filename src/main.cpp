@@ -135,8 +135,8 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(6, "ibl_brdf_lut");
         light_sp.set_sampler(7, "env_cube");     
         light_sp.set_sampler(8, "d_shadow_text");
-        light_sp.set_uniform("d_light.color", glm::vec3(10.0, 10.0, 10.0));
-        light_sp.set_uniform("d_light.direction", glm::vec3(1.0, 1.0, 1.0));
+        light_sp.set_uniform("d_light.color", direction_light.irradiance);
+        light_sp.set_uniform("d_light.direction", std::get<DirectionalLight>(direction_light.detail).direction);
 
         // postprocess
         _display_pass.set(scrWidth, scrHeight);
@@ -231,13 +231,24 @@ class PBR_render : public GLWidget
         light_fb.unbind();     
     }
 
+    bool enable_motion_blur{ false };
+    bool enable_fxaa{ true };
 
     void postprocess()
     {
-        _motion_blur_pass.execute({light_result_texture, gbtx_effects});
-        _color_correction_pass.execute(_motion_blur_pass);
-        _fxaa_pass.execute(_color_correction_pass);
-        _display_pass.render(_fxaa_pass);
+        auto final = light_result_texture;
+        if (enable_motion_blur)
+        {
+            _motion_blur_pass.execute({final, gbtx_effects});
+            final = _motion_blur_pass;
+        }
+        _color_correction_pass.execute(final);
+        if (enable_fxaa)
+        {
+            _fxaa_pass.execute(_color_correction_pass);
+            final = _fxaa_pass;
+        }
+        _display_pass.render(final);
     }
 
     virtual void render_loop() override
