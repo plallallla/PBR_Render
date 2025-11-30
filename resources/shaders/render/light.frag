@@ -174,9 +174,17 @@ vec3 indirect_irradiance(vec3 N, vec3 V, vec3 albedo, vec3 F0, float roughness, 
 void main()
 {
     vec3 light_to_frag = texture(s_position, uv).rgb - p_light.position;
-    float depth_from_map = texture(p_shadow_text, light_to_frag).r * far_plane;
-    float real_depth = length(light_to_frag);
-    fragment_color = vec4(vec3(depth_from_map / far_plane), 1.0); // 显示归一化深度
+    float depth_from_map = texture(p_shadow_text, light_to_frag).r;
+    float real_depth = length(light_to_frag) / far_plane;
+    // fragment_color = vec4(vec3(depth_from_map), 1.0); // 显示归一化深度
+    if (real_depth > depth_from_map)
+    {
+        fragment_color = vec4(1.0); // 显示归一化深度
+    }
+    else
+    {
+        fragment_color = vec4(0.0); // 显示归一化深度
+    }
     return;
     // skybox
     float depth = texture(s_position, uv).w;

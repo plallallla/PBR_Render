@@ -49,9 +49,6 @@ public:
         {
             _sp = get_directional_sp();
             light_geometry = std::get<DirectionalLight>(l.detail).direction;
-            light_geometry.x *= -1.0;
-            light_geometry.y *= -1.0;
-            light_geometry.z *= -1.0;
             _result = TEXTURE_MANAGER.generate_texture_buffer(width, height, TEXTURE_2D_DEPTH);
             _fb.attach_depth_texture(_result);
             float scene_radius = 15.0f; 
@@ -79,6 +76,9 @@ public:
             projection_view[4] = projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
             projection_view[5] = projection * glm::lookAt(light_geometry, light_geometry + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f));            
         }
+        light_geometry.x *= -1.0;
+        light_geometry.y *= -1.0;
+        light_geometry.z *= -1.0;        
         _fb.unbind();
     }
     
