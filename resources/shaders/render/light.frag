@@ -35,7 +35,8 @@ struct PointLight
     float linear;
     float quadratic;
 };
-uniform PointLight p_light[4];
+uniform PointLight p_light;
+// uniform PointLight p_light[4];
 
 const float near_plane = 0.1;
 const float far_plane = 75.0;
@@ -173,15 +174,12 @@ void main()
     float visibility = directional_shadow(world_space_position, bias);
     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
     // point light
-    for (int i = 0; i < 4; i++)
-    {
-        L = normalize(p_light[i].position - world_space_position);
-        H = normalize(V + L);
-        float d = distance(p_light[i].position, world_space_position);
-        float attenuation = 1.0 / (p_light[i].constant + d * p_light[i].linear + d * d * p_light[i].quadratic);
-        radiance = p_light[i].color * attenuation;
-        // Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);
-    }
+    L = normalize(p_light.position - world_space_position);
+    H = normalize(V + L);
+    float d = distance(p_light.position, world_space_position);
+    float attenuation = 1.0 / (p_light.constant + d * p_light.linear + d * d * p_light.quadratic);
+    radiance = p_light.color * attenuation;
+    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);   
     // ibl
     float ao = texture(s_effects, uv).r;
     vec3 ibl = indirect_irradiance(N, V, albedo, F0, roughness, metallic, ao);
