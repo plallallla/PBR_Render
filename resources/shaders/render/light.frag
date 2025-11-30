@@ -35,8 +35,8 @@ struct PointLight
     float linear;
     float quadratic;
 };
+uniform samplerCube p_shadow_text;
 uniform PointLight p_light;
-// uniform PointLight p_light[4];
 
 const float near_plane = 0.1;
 const float far_plane = 75.0;
@@ -67,6 +67,33 @@ float directional_shadow(vec3 world_pos, float bias)
         }
     }
     return 1.0 - (shadow / 9);
+}
+
+const vec3 gridSamplingDisk[20] = vec3[]
+(
+   vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1), 
+   vec3(1, 1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
+   vec3(1, 1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1, 1,  0),
+   vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
+   vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
+);
+float point_shadow(vec3 world_pos, float bias)
+{
+    vec3 fragToLight = world_pos - p_light.position;
+    float currentDepth = length(fragToLight);
+    float shadow = 0.0;
+    float viewDistance = length(eye_position - world_pos);
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 75.0;
+    for(int i = 0; i < 20; ++i)
+    {
+        float closestDepth = texture(p_shadow_text, fragToLight + gridSamplingDisk[i] * diskRadius).r;
+        closestDepth *= far_plane;
+        if(currentDepth - bias > closestDepth)
+        {
+            shadow += 1.0;
+        }
+    }
+    return 1.0 - (shadow / 20);
 }
 
 const float PI = 3.14159265359;
@@ -146,6 +173,11 @@ vec3 indirect_irradiance(vec3 N, vec3 V, vec3 albedo, vec3 F0, float roughness, 
 
 void main()
 {
+    vec3 light_to_frag = texture(s_position, uv).rgb - p_light.position;
+    float depth_from_map = texture(p_shadow_text, light_to_frag).r * far_plane;
+    float real_depth = length(light_to_frag);
+    fragment_color = vec4(vec3(depth_from_map / far_plane), 1.0); // 显示归一化深度
+    return;
     // skybox
     float depth = texture(s_position, uv).w;
     if (depth == 1) 
@@ -179,7 +211,9 @@ void main()
     float d = distance(p_light.position, world_space_position);
     float attenuation = 1.0 / (p_light.constant + d * p_light.linear + d * d * p_light.quadratic);
     radiance = p_light.color * attenuation;
-    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic);   
+    bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
+    visibility = point_shadow(world_space_position, bias);
+    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
     // ibl
     float ao = texture(s_effects, uv).r;
     vec3 ibl = indirect_irradiance(N, V, albedo, F0, roughness, metallic, ao);

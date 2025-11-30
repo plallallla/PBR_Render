@@ -49,9 +49,17 @@ namespace utility
     inline bool checkCompileErrors(GLuint id, std::string type)
     {
         GLint success;
+        GLchar infoLog[1024];
         auto& check = type != "PROGRAME" ? glGetShaderiv : glGetProgramiv;
         auto status = type != "PROGRAME" ? GL_COMPILE_STATUS : GL_LINK_STATUS;
         check(id, status, &success);
+        if (!success)
+        {
+            glGetShaderInfoLog(id, 1024, NULL, infoLog);
+            std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "->\n" << infoLog << std::endl;
+            LOG.info("\nSHADER_COMPILATION_ERROR of type: " + type + "\n" + infoLog);
+            return false;
+        }
         return success;
     }
 
