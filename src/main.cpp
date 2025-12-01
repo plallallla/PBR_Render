@@ -16,13 +16,22 @@
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
 #include <imgui.h>
+#include <vector>
 
 #include "Model.hpp"
 
 class PBR_render : public GLWidget
 {  
 
-    Material rusted_iron{TEXTURE_PATH + "pbr/rusted_iron"};
+    int _material_index{0};
+    std::vector<Material> _materials
+    {
+        {TEXTURE_PATH + "pbr/rusted_iron"},
+        {TEXTURE_PATH + "pbr/gold"},
+        {TEXTURE_PATH + "pbr/plastic"},
+        {TEXTURE_PATH + "pbr/wall"},
+    };
+
     Material woodfloor{TEXTURE_PATH + "pbr/woodfloor"};
 
     // 天空盒渲染pass
@@ -240,7 +249,7 @@ class PBR_render : public GLWidget
         glCullFace(GL_BACK);
         static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
         glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1        
-        render_object(teapot_obj, teapot_model, rusted_iron);
+        render_object(teapot_obj, teapot_model, _materials[_material_index]);
         render_object(floor_obj, floor_model, woodfloor);
         gbuffer_fb.unbind();
         prev_projection = projection;
@@ -350,7 +359,8 @@ class PBR_render : public GLWidget
         ImGui::Checkbox(u8"bloom blur", &_bright_extraction_pass._enable);
         ImGui::Checkbox(u8"motion blur", &_motion_blur_pass._enable);
         ImGui::Checkbox(u8"fxaa", &_fxaa_pass._enable);
-
+        const char* items[] = { u8"rusted iron", u8"gold", u8"plastic", u8"wall" };
+        ImGui::Combo("Material", &_material_index, items, IM_ARRAYSIZE(items));
     }
 
 public:
