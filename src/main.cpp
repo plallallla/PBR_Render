@@ -53,8 +53,8 @@ class PBR_render : public GLWidget
     Light point_light
     {
         light_type::point,
-        glm::vec3(10.0, 10.0, 10.0),
-        PointLight{glm::vec3(-1.0, 2.0, 1.0)/*position*/, {0.0, 1.0, 0.1}}
+        glm::vec3(30.0, 30.0, 30.0),
+        PointLight{glm::vec3(-1.0, 5.5, -1.0)/*position*/, {0.0, 1.0, 0.1}}
     };
     Shadow point_shadow{point_light, 2048, 2048};    
 
