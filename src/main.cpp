@@ -321,9 +321,10 @@ class PBR_render : public GLWidget
             input = _mixture_pass;
         }
         _color_correction_pass.execute(input);
+        input = _color_correction_pass;
         if (_fxaa_pass._enable)
         {
-            _fxaa_pass.execute(_color_correction_pass);
+            _fxaa_pass.execute(input);
             input = _fxaa_pass;
         }
         return input;
