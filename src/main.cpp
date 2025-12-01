@@ -175,6 +175,7 @@ class PBR_render : public GLWidget
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
+        _motion_blur_pass._sp.set_uniform("frag_size", glm::vec2(1.0 / _width, 1.0 / _height));
         // bloom blur
         _h_bloom_blur_pass.set(_width, _height);
         _h_bloom_blur_pass._enable = true;
