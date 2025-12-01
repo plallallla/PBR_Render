@@ -95,14 +95,6 @@ float point_shadow(vec3 world_pos, float bias)
     return 1.0 - (shadow / 20);
 }
 
-// float point_shadow(vec3 world_pos, float bias)
-// {
-//     vec3 fragToLight = world_pos - p_light.position;
-//     float depth = texture(p_shadow_text, fragToLight).r;
-//     float currentDepth = length(fragToLight) / far_plane;
-//     return currentDepth > depth + 0.05 ? 1.0 : 0.0;
-// }
-
 const float PI = 3.14159265359;
 const float MAX_REFLECTION_LOD = 4.0;
 

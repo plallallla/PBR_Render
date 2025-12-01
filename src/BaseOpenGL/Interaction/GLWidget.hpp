@@ -95,9 +95,8 @@ public:
     
     void update_viewport()
     {
-        int scrWidth, scrHeight;
-        glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
-        glViewport(0, 0, scrWidth, scrHeight);          
+        glfwGetFramebufferSize(window, &_width, &_height);
+        glViewport(0, 0, _width, _height);          
     }    
 
     void render()

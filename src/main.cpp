@@ -5,6 +5,7 @@
 #include "PostprocessRender.hpp"
 #include "ShaderProgram.hpp"
 #include "Shadow.hpp"
+#include "Shape.hpp"
 #include "SkyboxRender.hpp"
 #include "Material.hpp"
 #include "Texture.hpp"
@@ -40,6 +41,12 @@ class PBR_render : public GLWidget
     {
         SHADERS_PATH + "render/light.vert",
         SHADERS_PATH + "render/light.frag" 
+    };
+
+    ShaderProgram lighting_obj_sp
+    {
+        SHADERS_PATH + "shadow/lighting_obj.vert",
+        SHADERS_PATH + "shadow/lighting_obj.frag"
     };
 
     Light direction_light
@@ -148,8 +155,6 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(8, "d_shadow_text");
         light_sp.set_sampler(9, "p_shadow_text");
 
-
-
         // postprocess set
         _display_pass.set(_width, _height);
         _color_correction_pass.set(_width, _height);
@@ -257,7 +262,20 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(9, point_shadow, GL_TEXTURE_CUBE_MAP);
         // render
         VertexArray::render_empty_va();     
-        light_fb.unbind();     
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, light_fb);
+        glBlitFramebuffer(0, 0, _width, _height, 0, 0, _width, _height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        lighting_obj_sp.use();
+        lighting_obj_sp.set_uniform("light_color", point_light.irradiance);
+        glm::mat4 model(1.0);
+        model = glm::translate(model, std::get<PointLight>(point_light.detail).position);
+        model = glm::scale(model, {.2, .2, .2});
+        lighting_obj_sp.set_uniform("trans", projection * view * model);
+        Shape::render_sphere();
+        light_fb.unbind();
     }
 
     void postprocess()
