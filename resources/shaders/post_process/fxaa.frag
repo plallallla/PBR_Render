@@ -1,4 +1,4 @@
-#version 330 core
+#version 400 core
 
 uniform sampler2D screenTexture;
 uniform vec2 frag_size;
