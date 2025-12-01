@@ -23,6 +23,10 @@ public:
     {
         _width = width;
         _height = height;
+        if (_result)
+        {
+            TEXTURE_MANAGER.delete_texture(_result);
+        }
         _result = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, attributes);       
     }
     void execute(GLuint input = 0)

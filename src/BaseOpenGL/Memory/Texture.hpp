@@ -56,6 +56,11 @@ public:
         return textures;
     }
 
+    void delete_texture(GLuint texture)
+    {
+        glDeleteTextures(1, &texture);
+    }
+
     GLuint load_hdr_texture(std::string_view path)
     {
         if (_loaded_textures.find(path.data()) != _loaded_textures.end())

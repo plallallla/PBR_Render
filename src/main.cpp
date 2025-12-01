@@ -87,6 +87,7 @@ class PBR_render : public GLWidget
     PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
     PostprocessRender _motion_blur_pass{ SHADERS_PATH + "post_process/motion_blur.frag" };
     PostprocessRender _depth24_debug{ SHADERS_PATH + "post_process/depth24_debug.frag" };
+    PostprocessRender _bloom_blur_pass{ SHADERS_PATH + "post_process/bloom_blur.frag" };
 
     // glm::mat4 prev_proj_view_model;
     glm::mat4 projection;
@@ -168,6 +169,8 @@ class PBR_render : public GLWidget
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
+        _bloom_blur_pass.set(_width, _height);
+        _bloom_blur_pass._enable = true;
     }
 
     void shadow_compute()
@@ -278,8 +281,40 @@ class PBR_render : public GLWidget
         light_fb.unbind();
     }
 
-    void postprocess()
+    GLuint postprocess(GLuint input)
     {
+        if (_motion_blur_pass._enable)
+        {
+            _motion_blur_pass.execute({input, gbtx_effects});
+            input = _motion_blur_pass;
+        }
+        if (_bloom_blur_pass._enable) 
+        {
+            bool is_horizontal = false;
+            for (int i = 0; i < 10; i++)
+            {
+                _bloom_blur_pass._sp.set_uniform("horizontal", is_horizontal);
+                _bloom_blur_pass.execute(input);
+                input = _bloom_blur_pass;
+                is_horizontal = !is_horizontal;
+            }
+        }
+        _color_correction_pass.execute(input);
+        if (_fxaa_pass._enable)
+        {
+            _fxaa_pass.execute(_color_correction_pass);
+            input = _fxaa_pass;
+        }
+        return input;
+    }
+
+    virtual void render_loop() override
+    {
+        shadow_compute();
+        geometry_render();
+        light_render();
+        // _display_pass.render(postprocess(light_result_texture));
+
         auto final = light_result_texture;
         if (_motion_blur_pass._enable)
         {
@@ -293,16 +328,6 @@ class PBR_render : public GLWidget
             final = _fxaa_pass;
         }
         _display_pass.render(final);
-    }
-
-    virtual void render_loop() override
-    {
-        shadow_compute();
-        geometry_render();
-        light_render();
-        postprocess();
-        _display_pass.render(_fxaa_pass);
-        // _depth24_debug.render(direction_shadow);
     }
 
     virtual void gui_operation() override
