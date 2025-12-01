@@ -280,7 +280,7 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(9, point_shadow, GL_TEXTURE_CUBE_MAP);
         // render
         VertexArray::render_empty_va();     
-
+        // forawrd render light object
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, light_fb);
         glBlitFramebuffer(0, 0, _width, _height, 0, 0, _width, _height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -298,11 +298,7 @@ class PBR_render : public GLWidget
 
     GLuint postprocess(GLuint input)
     {
-        if (_motion_blur_pass._enable)
-        {
-            _motion_blur_pass.execute({input, gbtx_effects});
-            input = _motion_blur_pass;
-        }
+        // 颜色未校正 后续基于物理颜色处理
         if (_bright_extraction_pass._enable)
         {
             GLuint bloom_blur_target = input;
@@ -320,8 +316,14 @@ class PBR_render : public GLWidget
             _mixture_pass.execute({input, bloom_blur_target});
             input = _mixture_pass;
         }
+        // 颜色已校正 后续基于视觉颜色处理
         _color_correction_pass.execute(input);
         input = _color_correction_pass;
+        if (_motion_blur_pass._enable)
+        {
+            _motion_blur_pass.execute({input, gbtx_effects});
+            input = _motion_blur_pass;
+        }        
         if (_fxaa_pass._enable)
         {
             _fxaa_pass.execute(input);
