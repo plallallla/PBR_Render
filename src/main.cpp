@@ -53,8 +53,8 @@ class PBR_render : public GLWidget
     Light point_light
     {
         light_type::point,
-        glm::vec3(4.0, 4.0, 4.0),
-        PointLight{glm::vec3(-1.0, 1.0, 1.0), {0.0, 1.0, 0.1}}
+        glm::vec3(10.0, 10.0, 10.0),
+        PointLight{glm::vec3(-1.0, 2.0, 1.0)/*position*/, {0.0, 1.0, 0.1}}
     };
     Shadow point_shadow{point_light, 2048, 2048};    
 
@@ -147,14 +147,8 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(7, "env_cube");     
         light_sp.set_sampler(8, "d_shadow_text");
         light_sp.set_sampler(9, "p_shadow_text");
-        light_sp.set_uniform("d_light.color", direction_light.irradiance);
-        light_sp.set_uniform("d_light.direction", std::get<DirectionalLight>(direction_light.detail).direction);
 
-        light_sp.set_uniform("p_light.position", std::get<PointLight>(point_light.detail).position);
-        light_sp.set_uniform("p_light.color", point_light.irradiance);
-        light_sp.set_uniform("p_light.constant", std::get<PointLight>(point_light.detail).attenuation[0]);
-        light_sp.set_uniform("p_light.linear", std::get<PointLight>(point_light.detail).attenuation[1]);
-        light_sp.set_uniform("p_light.quadratic", std::get<PointLight>(point_light.detail).attenuation[2]);
+
 
         // postprocess set
         _display_pass.set(_width, _height);
@@ -169,7 +163,10 @@ class PBR_render : public GLWidget
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
+    }
 
+    void shadow_compute()
+    {
         // 计算方向阴影
         direction_shadow.begin();
         direction_shadow._sp->set_uniform("model", teapot_model);
@@ -228,17 +225,26 @@ class PBR_render : public GLWidget
 
     void light_render()
     {
-        // light
         light_fb.bind();
         update_viewport();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
         light_sp.use();
+        // geometry
         light_sp.set_uniform("eye_position", CAMERA.get_position());
         light_sp.set_uniform("cube_uv_trans", glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection));        
         light_sp.set_uniform("fragment_size", glm::vec2(1.0 / _width, 1.0 / _height));
         light_sp.set_uniform("d_light_matrix", (glm::mat4)direction_shadow.get_light_matrix());
+        // light
+        light_sp.set_uniform("d_light.color", direction_light.irradiance);
+        light_sp.set_uniform("d_light.direction", std::get<DirectionalLight>(direction_light.detail).direction);
+        light_sp.set_uniform("p_light.position", std::get<PointLight>(point_light.detail).position);
+        light_sp.set_uniform("p_light.color", point_light.irradiance);
+        light_sp.set_uniform("p_light.constant", std::get<PointLight>(point_light.detail).attenuation[0]);
+        light_sp.set_uniform("p_light.linear", std::get<PointLight>(point_light.detail).attenuation[1]);
+        light_sp.set_uniform("p_light.quadratic", std::get<PointLight>(point_light.detail).attenuation[2]);
+        // sampler
         light_sp.active_sampler(0, gbtx_position);
         light_sp.active_sampler(1, gbtx_albdeo);
         light_sp.active_sampler(2, gbtx_normal);
@@ -249,6 +255,7 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
         light_sp.active_sampler(8, direction_shadow);
         light_sp.active_sampler(9, point_shadow, GL_TEXTURE_CUBE_MAP);
+        // render
         VertexArray::render_empty_va();     
         light_fb.unbind();     
     }
@@ -272,6 +279,7 @@ class PBR_render : public GLWidget
 
     virtual void render_loop() override
     {
+        shadow_compute();
         geometry_render();
         light_render();
         postprocess();
@@ -279,8 +287,16 @@ class PBR_render : public GLWidget
         // _depth24_debug.render(direction_shadow);
     }
 
+    virtual void gui_operation() override
+    {
+        PointLight* pl = std::get_if<PointLight>(&point_light.detail);
+        ImGui::SliderFloat(u8"point light.x", &pl->position.x, -10.0, 10.0);
+        ImGui::SliderFloat(u8"point light.y", &pl->position.y, 0.05, 10.0);
+        ImGui::SliderFloat(u8"point light.z", &pl->position.z, -10.0, 10.0);
+    }
+
 public:
-    PBR_render(int width, int height, std::string_view title) : GLWidget(width,height,title) 
+    PBR_render(int width, int height, std::string_view title) : GLWidget(width,height,title,true) 
     {
     }
 };

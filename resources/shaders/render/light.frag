@@ -80,7 +80,9 @@ const vec3 gridSamplingDisk[20] = vec3[]
 float point_shadow(vec3 world_pos, float bias)
 {
     vec3 fragToLight = world_pos - p_light.position;
-    float currentDepth = length(fragToLight);
+    float depth = texture(p_shadow_text, fragToLight).r;
+    float currentDepth = length(fragToLight) / far_plane;
+    return currentDepth > depth + 0.05 ? 1.0 : 0.0;
     float shadow = 0.0;
     float viewDistance = length(eye_position - world_pos);
     float diskRadius = (1.0 + (viewDistance / far_plane)) / 75.0;
@@ -173,19 +175,7 @@ vec3 indirect_irradiance(vec3 N, vec3 V, vec3 albedo, vec3 F0, float roughness, 
 
 void main()
 {
-    vec3 light_to_frag = texture(s_position, uv).rgb - p_light.position;
-    float depth_from_map = texture(p_shadow_text, light_to_frag).r;
-    float real_depth = length(light_to_frag) / far_plane;
-    // fragment_color = vec4(vec3(depth_from_map), 1.0); // 显示归一化深度
-    if (real_depth > depth_from_map)
-    {
-        fragment_color = vec4(1.0); // 显示归一化深度
-    }
-    else
-    {
-        fragment_color = vec4(0.0); // 显示归一化深度
-    }
-    return;
+
     // skybox
     float depth = texture(s_position, uv).w;
     if (depth == 1) 
@@ -212,7 +202,7 @@ void main()
     vec3 radiance = d_light.color;
     float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
     float visibility = directional_shadow(world_space_position, bias);
-    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
+    // Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
     // point light
     L = normalize(p_light.position - world_space_position);
     H = normalize(V + L);
