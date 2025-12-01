@@ -24,7 +24,7 @@ private: \
 
 #include "LogHelper.h"
 
-#define HAS_RESULT protected: GLuint _result; public: operator GLuint() { return _result; }
+#define HAS_RESULT protected: GLuint _result{0}; public: operator GLuint() { return _result; }
 
 namespace utility
 {
