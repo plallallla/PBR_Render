@@ -15,6 +15,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
+#include <imgui.h>
 
 #include "Model.hpp"
 
@@ -87,7 +88,10 @@ class PBR_render : public GLWidget
     PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
     PostprocessRender _motion_blur_pass{ SHADERS_PATH + "post_process/motion_blur.frag" };
     PostprocessRender _depth24_debug{ SHADERS_PATH + "post_process/depth24_debug.frag" };
-    PostprocessRender _bloom_blur_pass{ SHADERS_PATH + "post_process/bloom_blur.frag" };
+    PostprocessRender _h_bloom_blur_pass{ SHADERS_PATH + "post_process/horizontal_bloom_blur.frag" };
+    PostprocessRender _v_bloom_blur_pass{ SHADERS_PATH + "post_process/vertical_bloom_blur.frag" };
+    PostprocessRender _bright_extraction_pass{ SHADERS_PATH + "post_process/bright_extraction.frag" };
+    PostprocessRender _mixture_pass{ SHADERS_PATH + "post_process/mixture.frag" };
 
     // glm::mat4 prev_proj_view_model;
     glm::mat4 projection;
@@ -156,21 +160,32 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(8, "d_shadow_text");
         light_sp.set_sampler(9, "p_shadow_text");
 
-        // postprocess set
+        // common postprocess set
         _display_pass.set(_width, _height);
         _color_correction_pass.set(_width, _height);
         _depth24_debug.set(_width, _height);
+        // fxaa
         _fxaa_pass._enable = true;
         _fxaa_pass.set(_width, _height);
         _fxaa_pass._sp.use();
         _fxaa_pass._sp.set_uniform("frag_size", glm::vec2(1.0 / _width, 1.0 / _height));
+        // motion blur
         _motion_blur_pass._enable = false;
         _motion_blur_pass.set(_width, _height);
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
-        _bloom_blur_pass.set(_width, _height);
-        _bloom_blur_pass._enable = true;
+        // bloom blur
+        _h_bloom_blur_pass.set(_width, _height);
+        _h_bloom_blur_pass._enable = true;
+        _v_bloom_blur_pass.set(_width, _height);
+        _v_bloom_blur_pass._enable = true;
+        _bright_extraction_pass.set(_width, _height);
+        _bright_extraction_pass._enable = true;
+        _mixture_pass.set(_width, _height);
+        _mixture_pass._enable = true;
+        _mixture_pass._sp.set_sampler(0, "screenTexture1");
+        _mixture_pass._sp.set_sampler(1, "screenTexture2");
     }
 
     void shadow_compute()
@@ -288,16 +303,22 @@ class PBR_render : public GLWidget
             _motion_blur_pass.execute({input, gbtx_effects});
             input = _motion_blur_pass;
         }
-        if (_bloom_blur_pass._enable) 
+        if (_bright_extraction_pass._enable)
         {
-            bool is_horizontal = false;
-            for (int i = 0; i < 10; i++)
+            GLuint bloom_blur_target = input;
+            _bright_extraction_pass.execute(input);
+            bloom_blur_target = _bright_extraction_pass;            
+            if (_h_bloom_blur_pass._enable && _v_bloom_blur_pass._enable) 
             {
-                _bloom_blur_pass._sp.set_uniform("horizontal", is_horizontal);
-                _bloom_blur_pass.execute(input);
-                input = _bloom_blur_pass;
-                is_horizontal = !is_horizontal;
+                for (int i = 0; i < 10; i++)
+                {
+                    _h_bloom_blur_pass.execute(bloom_blur_target);
+                    _v_bloom_blur_pass.execute(_h_bloom_blur_pass);
+                    bloom_blur_target = (GLuint)_v_bloom_blur_pass;
+                }
             }
+            _mixture_pass.execute({input, bloom_blur_target});
+            input = _mixture_pass;
         }
         _color_correction_pass.execute(input);
         if (_fxaa_pass._enable)
@@ -313,21 +334,7 @@ class PBR_render : public GLWidget
         shadow_compute();
         geometry_render();
         light_render();
-        // _display_pass.render(postprocess(light_result_texture));
-
-        auto final = light_result_texture;
-        if (_motion_blur_pass._enable)
-        {
-            _motion_blur_pass.execute({final, gbtx_effects});
-            final = _motion_blur_pass;
-        }
-        _color_correction_pass.execute(final);
-        if (_fxaa_pass._enable)
-        {
-            _fxaa_pass.execute(_color_correction_pass);
-            final = _fxaa_pass;
-        }
-        _display_pass.render(final);
+        _display_pass.render(postprocess(light_result_texture));
     }
 
     virtual void gui_operation() override
@@ -336,6 +343,10 @@ class PBR_render : public GLWidget
         ImGui::SliderFloat(u8"point light.x", &pl->position.x, -10.0, 10.0);
         ImGui::SliderFloat(u8"point light.y", &pl->position.y, 0.05, 10.0);
         ImGui::SliderFloat(u8"point light.z", &pl->position.z, -10.0, 10.0);
+        ImGui::Checkbox(u8"bloom blur", &_bright_extraction_pass._enable);
+        ImGui::Checkbox(u8"motion blur", &_motion_blur_pass._enable);
+        ImGui::Checkbox(u8"fxaa", &_fxaa_pass._enable);
+
     }
 
 public:
