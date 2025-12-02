@@ -126,11 +126,31 @@ public:
 
 };
 
+class DirectionalShadow
+{
+    FrameBuffer _fb;
+    GLuint _size;
+    glm::vec3 _last_direction; 
+    glm::mat4 _light_matrix;
+    
+public:
+    HAS_RESULT;
+    ShaderProgram _sp
+    {
+        SHADERS_PATH + "shadow/directional.vert",
+        SHADERS_PATH + "shadow/directional.frag"        
+    };
+    DirectionalShadow(GLuint size)
+    {
+
+    }
+};
+
+
 class PointShadow
 {
     FrameBuffer _fb;
-    GLuint _width;
-    GLuint _height;
+    GLuint _size;
     float _near{.1f};
     float _far{75.f};
     glm::vec3 _last_position;
@@ -143,15 +163,14 @@ public:
         SHADERS_PATH + "shadow/point.geom", 
         SHADERS_PATH + "shadow/point.frag"        
     };
-    void update_texture_size(GLuint width, GLuint height)
+    PointShadow(GLuint size)
     {
-        _width = width;
-        _height = height;
+        _size = size;
         if (_result)
         {
             TEXTURE_MANAGER.delete_texture(_result);
         }
-        _result = TEXTURE_MANAGER.generate_cube_texture_buffer(_width, _height, TEXTURE_CUBE_DEPTH);
+        _result = TEXTURE_MANAGER.generate_cube_texture_buffer(_size, _size, TEXTURE_CUBE_DEPTH);
         _fb.bind();
         _fb.attach_depth_texture_array(_result);
         _fb.set_draw_read(GL_NONE, GL_NONE);
@@ -159,7 +178,7 @@ public:
     }
     void update_light_position(glm::vec3 light_position)
     {
-        glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)_width / (float)_height, _near, _far);
+        glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1.0f, _near, _far);
         _light_matrix[0] = projection * glm::lookAt(light_position, light_position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
         _light_matrix[1] = projection * glm::lookAt(light_position, light_position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
         _light_matrix[2] = projection * glm::lookAt(light_position, light_position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -174,10 +193,11 @@ public:
         {
             update_light_position(light_position);
         }
-        glViewport(0, 0, _width, _height);
+        glViewport(0, 0, _size, _size);
         _fb.bind();
         _sp.use();
         glClear(GL_DEPTH_BUFFER_BIT);
+        glDepthMask(GL_TRUE);
         for (unsigned int i = 0; i < 6; ++i)
         {
             _sp.set_uniform("shadowMatrices[" + std::to_string(i) + "]", _light_matrix[i]);

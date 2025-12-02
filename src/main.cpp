@@ -55,8 +55,8 @@ class PBR_render : public GLWidget
 
     ShaderProgram lighting_obj_sp
     {
-        SHADERS_PATH + "shadow/lighting_obj.vert",
-        SHADERS_PATH + "shadow/lighting_obj.frag"
+        SHADERS_PATH + "forward/lighting_obj.vert",
+        SHADERS_PATH + "forward/lighting_obj.frag"
     };
 
     Light direction_light
@@ -71,20 +71,9 @@ class PBR_render : public GLWidget
     {
         light_type::point,
         glm::vec3(30.0, 30.0, 30.0),
-        PointLight{glm::vec3(0.0f, 1.5f, -5.0f)/*position*/, {0.0, 1.0, 0.1}}
+        PointLight{glm::vec3(0.0f, 5.0f, 0.0f)/*position*/, {0.0, 1.0, 0.1}}
     };
-    // PointShadow point_shadow;    
-
-
-    ShaderProgram depth_shader
-    {
-        SHADERS_PATH + "shadow/debug/point_shadows_depth.vs", 
-        SHADERS_PATH + "shadow/debug/point_shadows_depth.gs", 
-        SHADERS_PATH + "shadow/debug/point_shadows_depth.fs"
-    };    
-    // point shadow debug
-    GLuint depth_texture;
-    FrameBuffer frame;    
+    PointShadow point_shadow{2048};     
 
     // 用于光线透视矩阵
     float near_plane = 0.1;
@@ -123,27 +112,6 @@ class PBR_render : public GLWidget
     glm::mat4 teapot_model;
     Model floor_obj;
     glm::mat4 floor_model;
-
-    void render_cubes(const ShaderProgram &shader)
-    {
-        // cubes
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        shader.set_uniform<glm::mat4>("model", model);
-        Shape::render_cube();
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        shader.set_uniform<glm::mat4>("model", model);
-        Shape::render_cube();
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0));
-        model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-        model = glm::scale(model, glm::vec3(0.25));
-        shader.set_uniform<glm::mat4>("model", model);
-        Shape::render_cube();
-    }
 
     virtual void application() override
     {
@@ -229,14 +197,6 @@ class PBR_render : public GLWidget
         _mixture_pass._sp.set_sampler(0, "screenTexture1");
         _mixture_pass._sp.set_sampler(1, "screenTexture2");
 
-        // shadow
-        // point_shadow.update_texture_size(_width, _height);
-
-        depth_texture = TEXTURE_MANAGER.generate_cube_texture_buffer(2048, 2048);
-        frame.bind();
-        frame.attach_depth_texture_array(depth_texture);
-        frame.set_draw_read(GL_NONE, GL_NONE);
-        frame.unbind();        
     }
 
     void shadow_compute()
@@ -249,46 +209,12 @@ class PBR_render : public GLWidget
         floor_obj.render_elements();
         direction_shadow.end();
         // 计算点阴影
-        // point_shadow.begin(std::get<PointLight>(point_light.detail).position);
-        // point_shadow._sp->set_uniform("model", teapot_model);
-        // teapot_obj.render_elements();
-        // render_cubes(point_shadow._sp);
-        // point_shadow._sp.set_uniform("model", floor_model);
-        // floor_obj.render_elements();
-        // point_shadow.end();
-
-        // 0. create depth cubemap transformation matrices
-        // -----------------------------------------------
-        auto lightPos = std::get<PointLight>(point_light.detail).position;
-        float near_plane = 1.0f;
-        float far_plane = 75.0f;
-        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)2048 / (float)2048, near_plane, far_plane);
-        std::vector<glm::mat4> shadowTransforms;
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-
-        // 1. render scene to depth cubemap
-        // --------------------------------
-        glViewport(0, 0, 2048, 2048);
-        frame.bind();
-        glClear(GL_DEPTH_BUFFER_BIT);
-        depth_shader.use();
-        for (unsigned int i = 0; i < 6; ++i)
-        {
-            depth_shader.set_uniform("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-        }
-        depth_shader.set_uniform("far_plane", far_plane);
-        depth_shader.set_uniform("lightPos", lightPos);
-        glCullFace(GL_FRONT);//改变面剔除以解决阴影悬浮问题
-        render_cubes(depth_shader);
-        depth_shader.set_uniform("model", floor_model);
+        point_shadow.begin(std::get<PointLight>(point_light.detail).position);
+        point_shadow._sp.set_uniform("model", teapot_model);
+        teapot_obj.render_elements();
+        point_shadow._sp.set_uniform("model", floor_model);
         floor_obj.render_elements();
-        glCullFace(GL_BACK);//改变面剔除以解决阴影悬浮问题
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);      
+        point_shadow.end();
     }
 
     void render_object(Model& m, const glm::mat4 model, const Material& material)
@@ -316,45 +242,7 @@ class PBR_render : public GLWidget
         glCullFace(GL_BACK);
         static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
         glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1        
-        // render_object(teapot_obj, teapot_model, _materials[_material_index]);
-
-
-        
-        // cubes
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        gbuffer_sp.set_uniform<glm::mat4>("model", model);
-        gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
-        glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
-        gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
-        gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
-        gbuffer_sp.set_uniform("prev_proj_view_model", prev_projection * prev_view * model);
-        _materials[0].active(0);
-        Shape::render_cube();
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        gbuffer_sp.set_uniform<glm::mat4>("model", model);
-        gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
-        normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
-        gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
-        gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
-        gbuffer_sp.set_uniform("prev_proj_view_model", prev_projection * prev_view * model);
-        _materials[0].active(0);        
-        Shape::render_cube();
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0));
-        model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-        model = glm::scale(model, glm::vec3(0.25));
-        gbuffer_sp.set_uniform<glm::mat4>("model", model);
-        gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
-        normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
-        gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
-        gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
-        gbuffer_sp.set_uniform("prev_proj_view_model", prev_projection * prev_view * model);
-        _materials[0].active(0);  
-        Shape::render_cube();
+        render_object(teapot_obj, teapot_model, _materials[_material_index]);
         render_object(floor_obj, floor_model, woodfloor);
         gbuffer_fb.unbind();
         prev_projection = projection;
@@ -392,8 +280,7 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(6, budf_lut);
         light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
         light_sp.active_sampler(8, direction_shadow);
-        // light_sp.active_sampler(9, point_shadow, GL_TEXTURE_CUBE_MAP);
-        light_sp.active_sampler(9, depth_texture, GL_TEXTURE_CUBE_MAP);
+        light_sp.active_sampler(9, point_shadow, GL_TEXTURE_CUBE_MAP);
         // render
         VertexArray::render_empty_va();     
         // forawrd render light object

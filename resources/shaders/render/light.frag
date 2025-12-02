@@ -204,12 +204,7 @@ void main()
     float d = distance(p_light.position, world_space_position);
     float attenuation = 1.0 / (p_light.constant + d * p_light.linear + d * d * p_light.quadratic);
     radiance = p_light.color * attenuation;
-    visibility = point_shadow(world_space_position, 0.15);// 点阴影用固定bias减少噪点
-    if (visibility < 0.5)
-    {
-    fragment_color = vec4(vec3(0.0), 1.0);
-    return;
-    }
+    visibility = point_shadow(world_space_position, 0.015);// 点阴影用固定bias减少噪点
     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
     // ibl
     float ao = texture(s_effects, uv).r;
