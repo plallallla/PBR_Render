@@ -242,12 +242,12 @@ class PBR_render : public GLWidget
     void shadow_compute()
     {
         // 计算方向阴影
-        // direction_shadow.begin();
-        // direction_shadow._sp->set_uniform("model", teapot_model);
-        // teapot_obj.render_elements();
-        // direction_shadow._sp->set_uniform("model", floor_model);
-        // floor_obj.render_elements();
-        // direction_shadow.end();
+        direction_shadow.begin();
+        direction_shadow._sp->set_uniform("model", teapot_model);
+        teapot_obj.render_elements();
+        direction_shadow._sp->set_uniform("model", floor_model);
+        floor_obj.render_elements();
+        direction_shadow.end();
         // 计算点阴影
         // point_shadow.begin(std::get<PointLight>(point_light.detail).position);
         // point_shadow._sp->set_uniform("model", teapot_model);
@@ -453,8 +453,7 @@ class PBR_render : public GLWidget
         shadow_compute();
         geometry_render();
         light_render();
-        _display_pass.render(light_result_texture);
-        // _display_pass.render(postprocess(light_result_texture));
+        _display_pass.render(postprocess(light_result_texture));
     }
 
     virtual void gui_operation() override
@@ -479,7 +478,6 @@ public:
 int main()
 {
     PBR_render pbr_render_widget{900, 800, "pbr_render"};
-    // PointShadowWidget pbr_render_widget{900, 800, "pbr_render"};
     pbr_render_widget.render();
     return 0;
 }

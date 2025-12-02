@@ -77,43 +77,22 @@ const vec3 gridSamplingDisk[20] = vec3[]
    vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
-// float point_shadow(vec3 world_pos, float bias)
-// {
-//     vec3 fragToLight = world_pos - p_light.position;
-//     float currentDepth = length(fragToLight) / far_plane;
-//     float shadow = 0.0;
-//     float viewDistance = length(eye_position - world_pos);
-//     float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0;
-//     for(int i = 0; i < 20; ++i)
-//     {
-//         float depth = texture(p_shadow_text, fragToLight + gridSamplingDisk[i] * diskRadius).r;
-//         if(currentDepth - bias > depth)
-//         {
-//             shadow += 1.0;
-//         }
-//     }
-//     return 1.0 - (shadow / 20);
-// }
-
-
-float ShadowCalculation(vec3 fragPos)
+float point_shadow(vec3 world_pos, float bias)
 {
-    vec3 fragToLight = fragPos - p_light.position;
-    float currentDepth = length(fragToLight);
+    vec3 fragToLight = world_pos - p_light.position;
     float shadow = 0.0;
-    float bias = 0.15;
-    int samples = 20;
-    float viewDistance = length(eye_position - fragPos);
+    float viewDistance = length(eye_position - world_pos);
     float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0;
-    for(int i = 0; i < samples; ++i)
+    float currentDepth = length(fragToLight);
+    for(int i = 0; i < 20; ++i)
     {
-        float closestDepth = texture(p_shadow_text, fragToLight + gridSamplingDisk[i] * diskRadius).r;
-        closestDepth *= far_plane;   // undo mapping [0;1]
-        if(currentDepth - bias > closestDepth)
+        float depth = texture(p_shadow_text, fragToLight + gridSamplingDisk[i] * diskRadius).r * far_plane;
+        if(currentDepth - bias > depth)
+        {
             shadow += 1.0;
+        }
     }
-    shadow /= float(samples);
-    return shadow;
+    return 1.0 - (shadow / 20);
 }
 
 const float PI = 3.14159265359;
@@ -193,12 +172,6 @@ vec3 indirect_irradiance(vec3 N, vec3 V, vec3 albedo, vec3 F0, float roughness, 
 
 void main()
 {
-    vec3 light_to_frag = texture(s_position, uv).rgb - vec3(0.0);
-    float depth_from_map = texture(p_shadow_text, light_to_frag).r;
-
-    fragment_color = vec4(vec3(1.0 - ShadowCalculation(texture(s_position, uv).rgb)), 1.0);
-    return;
-    // skybox
     float depth = texture(s_position, uv).w;
     if (depth == 1) 
     {
@@ -231,11 +204,13 @@ void main()
     float d = distance(p_light.position, world_space_position);
     float attenuation = 1.0 / (p_light.constant + d * p_light.linear + d * d * p_light.quadratic);
     radiance = p_light.color * attenuation;
-    visibility = ShadowCalculation(world_space_position);// 点阴影用固定bias减少噪点
-    // visibility = point_shadow(world_space_position, 0.05);// 点阴影用固定bias减少噪点
-    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
-    fragment_color = vec4(vec3(visibility), 1.0);
+    visibility = point_shadow(world_space_position, 0.15);// 点阴影用固定bias减少噪点
+    if (visibility < 0.5)
+    {
+    fragment_color = vec4(vec3(0.0), 1.0);
     return;
+    }
+    Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
     // ibl
     float ao = texture(s_effects, uv).r;
     vec3 ibl = indirect_irradiance(N, V, albedo, F0, roughness, metallic, ao);
