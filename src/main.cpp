@@ -196,6 +196,7 @@ class PBR_render : public GLWidget
         _bright_extraction_pass._enable = true;
         _mixture_pass.set(_width, _height);
         _mixture_pass._enable = true;
+        _mixture_pass._sp.use();
         _mixture_pass._sp.set_sampler(0, "screenTexture1");
         _mixture_pass._sp.set_sampler(1, "screenTexture2");
 
