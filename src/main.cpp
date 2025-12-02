@@ -65,7 +65,7 @@ class PBR_render : public GLWidget
         glm::vec3(10.0, 10.0, 10.0),
         DirectionalLight{glm::vec3(1.0, 1.0, 1.0)}
     }; 
-    Shadow direction_shadow{direction_light, 2048, 2048};    
+    DirectionalShadow direction_shadow{2048};    
 
     Light point_light
     {
@@ -101,6 +101,8 @@ class PBR_render : public GLWidget
     PostprocessRender _v_bloom_blur_pass{ SHADERS_PATH + "post_process/vertical_bloom_blur.frag" };
     PostprocessRender _bright_extraction_pass{ SHADERS_PATH + "post_process/bright_extraction.frag" };
     PostprocessRender _mixture_pass{ SHADERS_PATH + "post_process/mixture.frag" };
+
+    float _bloom_bright_threshold{1.0};
 
     // glm::mat4 prev_proj_view_model;
     glm::mat4 projection;
@@ -202,10 +204,10 @@ class PBR_render : public GLWidget
     void shadow_compute()
     {
         // 计算方向阴影
-        direction_shadow.begin();
-        direction_shadow._sp->set_uniform("model", teapot_model);
+        direction_shadow.begin(std::get<DirectionalLight>(direction_light.detail).direction);
+        direction_shadow._sp.set_uniform("model", teapot_model);
         teapot_obj.render_elements();
-        direction_shadow._sp->set_uniform("model", floor_model);
+        direction_shadow._sp.set_uniform("model", floor_model);
         floor_obj.render_elements();
         direction_shadow.end();
         // 计算点阴影
@@ -299,14 +301,15 @@ class PBR_render : public GLWidget
         light_fb.unbind();
     }
 
-    GLuint postprocess(GLuint input)
+    // 颜色未校正 基于物理颜色处理
+    GLuint physical_postprocess(GLuint input)
     {
-        // 颜色未校正 后续基于物理颜色处理
         if (_bright_extraction_pass._enable)
         {
-            GLuint bloom_blur_target = input;
+            _bright_extraction_pass._sp.use();
+            _bright_extraction_pass._sp.set_uniform<float>("threshold", _bloom_bright_threshold);
             _bright_extraction_pass.execute(input);
-            bloom_blur_target = _bright_extraction_pass;            
+            GLuint bloom_blur_target = _bright_extraction_pass;    
             if (_h_bloom_blur_pass._enable && _v_bloom_blur_pass._enable) 
             {
                 for (int i = 0; i < 10; i++)
@@ -319,9 +322,12 @@ class PBR_render : public GLWidget
             _mixture_pass.execute({input, bloom_blur_target});
             input = _mixture_pass;
         }
-        // 颜色已校正 后续基于视觉颜色处理
-        _color_correction_pass.execute(input);
-        input = _color_correction_pass;
+        return input;
+    }
+
+    // 颜色已校正 基于视觉颜色处理
+    GLuint visiual_postprocess(GLuint input)
+    {
         if (_motion_blur_pass._enable)
         {
             _motion_blur_pass.execute({input, gbtx_effects});
@@ -333,6 +339,12 @@ class PBR_render : public GLWidget
             input = _fxaa_pass;
         }
         return input;
+    }    
+
+    GLuint postprocess(GLuint input)
+    {
+        _color_correction_pass.execute(physical_postprocess(input));
+        return visiual_postprocess(_color_correction_pass);
     }
 
     virtual void render_loop() override
@@ -345,11 +357,18 @@ class PBR_render : public GLWidget
 
     virtual void gui_operation() override
     {
+        DirectionalLight* dl = std::get_if<DirectionalLight>(&direction_light.detail);
+        ImGui::SliderFloat(u8"direction light.x", &dl->direction.x, -10.0, 10.0);
+        ImGui::SliderFloat(u8"direction light.z", &dl->direction.z, -10.0, 10.0);
         PointLight* pl = std::get_if<PointLight>(&point_light.detail);
         ImGui::SliderFloat(u8"point light.x", &pl->position.x, -10.0, 10.0);
         ImGui::SliderFloat(u8"point light.y", &pl->position.y, 0.05, 10.0);
         ImGui::SliderFloat(u8"point light.z", &pl->position.z, -10.0, 10.0);
         ImGui::Checkbox(u8"bloom blur", &_bright_extraction_pass._enable);
+        if (_bright_extraction_pass._enable)
+        {
+            ImGui::SliderFloat(u8"bloom bright threshold", &_bloom_bright_threshold, 0.5, 10.0);
+        }
         ImGui::Checkbox(u8"motion blur", &_motion_blur_pass._enable);
         ImGui::Checkbox(u8"fxaa", &_fxaa_pass._enable);
         const char* items[] = { u8"rusted iron", u8"gold", u8"plastic", u8"wall" };

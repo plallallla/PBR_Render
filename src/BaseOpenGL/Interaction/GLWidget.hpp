@@ -38,7 +38,7 @@ protected:
     GLFWwindow* window{nullptr};
     int _width;
     int _height;
-    int _debug_width{300};
+    int _debug_width{400};
     bool _gui{ false };
 
     inline glm::mat4 get_projection()
