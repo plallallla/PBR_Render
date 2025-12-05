@@ -21,9 +21,8 @@
 #include "Model.hpp"
 
 class PBR_render : public GLWidget
-{  
-
-    int _material_index{0};
+{
+    /* 纹理材质 */
     std::vector<Material> _materials
     {
         {TEXTURE_PATH + "pbr/rusted_iron"},
@@ -31,20 +30,20 @@ class PBR_render : public GLWidget
         {TEXTURE_PATH + "pbr/plastic"},
         {TEXTURE_PATH + "pbr/wall"},
     };
-
     Material woodfloor{TEXTURE_PATH + "pbr/woodfloor"};
+    int _material_index{0};
 
     // 天空盒渲染pass
     GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
     SkyboxRender _skybox;
 
-    // 预处理渲染
+    /* 预计算 */
     BRDF_LUT budf_lut;
     EquirectConvertRender equirect_pass;
     ConvolutionIBLRender convolution_pass;
     PrefilterIBLRender prefilter_pass;
 
-    // light资源
+    /* 光照计算资源 */
     FrameBuffer light_fb;
     GLuint light_result_texture;
     ShaderProgram light_sp
@@ -52,34 +51,35 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "render/light.vert",
         SHADERS_PATH + "render/light.frag" 
     };
-
     ShaderProgram lighting_obj_sp
     {
         SHADERS_PATH + "forward/lighting_obj.vert",
         SHADERS_PATH + "forward/lighting_obj.frag"
     };
 
+
+    /* light & shadow */
+    // 用于光线透视矩阵
+    float near_plane = 0.1;
+    float far_plane = 75.0;   
+    // light data
     Light direction_light
     {
         light_type::directional,
         glm::vec3(10.0, 10.0, 10.0),
         DirectionalLight{glm::vec3(1.0, 1.0, 1.0)}
     }; 
-    DirectionalShadow direction_shadow{2048};    
-
     Light point_light
     {
         light_type::point,
         glm::vec3(30.0, 30.0, 30.0),
         PointLight{glm::vec3(0.0f, 5.0f, 0.0f)/*position*/, {0.0, 1.0, 0.1}}
     };
-    PointShadow point_shadow{2048};     
+    // shadow map
+    DirectionalShadow direction_shadow{2048};    
+    PointShadow point_shadow{2048};      
 
-    // 用于光线透视矩阵
-    float near_plane = 0.1;
-    float far_plane = 75.0;    
-
-    // gbuffer资源
+    /* 几何资源 */
     FrameBuffer gbuffer_fb;
     GLuint gbtx_position;
     GLuint gbtx_albdeo;
@@ -91,25 +91,32 @@ class PBR_render : public GLWidget
         SHADERS_PATH + "render/gbuffer.frag" 
     };    
 
-    // 后处理
+    /* 后处理资源 */
+    // regular display
     PostprocessRender _display_pass{ SHADERS_PATH + "post_process/display.frag" };
-    PostprocessRender _color_correction_pass{ SHADERS_PATH + "post_process/color_correction.frag" };
-    PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
-    PostprocessRender _motion_blur_pass{ SHADERS_PATH + "post_process/motion_blur.frag" };
+    // shadow debug
     PostprocessRender _depth24_debug{ SHADERS_PATH + "post_process/depth24_debug.frag" };
+    // color correction <- tone map + hdr
+    PostprocessRender _color_correction_pass{ SHADERS_PATH + "post_process/color_correction.frag" };
+    // aa
+    PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
+    // motion blur
+    PostprocessRender _motion_blur_pass{ SHADERS_PATH + "post_process/motion_blur.frag" };
+    // bloom blur
     PostprocessRender _h_bloom_blur_pass{ SHADERS_PATH + "post_process/horizontal_bloom_blur.frag" };
     PostprocessRender _v_bloom_blur_pass{ SHADERS_PATH + "post_process/vertical_bloom_blur.frag" };
     PostprocessRender _bright_extraction_pass{ SHADERS_PATH + "post_process/bright_extraction.frag" };
     PostprocessRender _mixture_pass{ SHADERS_PATH + "post_process/mixture.frag" };
-
     float _bloom_bright_threshold{1.0};
+    // sao
+    PostprocessRender _sao_compute_pass{ SHADERS_PATH + "post_process/sao_compute.frag" };
+    PostprocessRender _sao_blur_pass{ SHADERS_PATH + "post_process/sao_blur.frag" };
 
-    // glm::mat4 prev_proj_view_model;
     glm::mat4 projection;
     glm::mat4 view;
-    glm::mat4 prev_projection;
     glm::mat4 prev_view;
 
+    // 模型数据
     Model teapot_obj;
     glm::mat4 teapot_model;
     Model floor_obj;
@@ -120,7 +127,7 @@ class PBR_render : public GLWidget
 
         stbi_set_flip_vertically_on_load(true);
         
-        // 场景搭建
+        // scene
         teapot_obj.load_single_obj({"../resources/obj/teapot.obj"});
         teapot_model = glm::mat4(1.0);
         teapot_model = glm::translate(teapot_model, {0.0, 2.0, 0.0});
@@ -200,6 +207,10 @@ class PBR_render : public GLWidget
         _mixture_pass._sp.set_sampler(0, "screenTexture1");
         _mixture_pass._sp.set_sampler(1, "screenTexture2");
 
+        projection = get_projection();
+        view = CAMERA.get_view_matrix(); 
+        prev_view = view;
+
     }
 
     void shadow_compute()
@@ -227,14 +238,13 @@ class PBR_render : public GLWidget
         glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
         gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
         gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
-        gbuffer_sp.set_uniform("prev_proj_view_model", prev_projection * prev_view * model);
+        gbuffer_sp.set_uniform("prev_proj_view_model", projection * prev_view * model);
         material.active(0);
         m.render_elements();        
     }    
 
     void geometry_render()
     {
-        projection = get_projection();
         view = CAMERA.get_view_matrix(); 
         gbuffer_fb.bind();
         gbuffer_sp.use();
@@ -248,7 +258,6 @@ class PBR_render : public GLWidget
         render_object(teapot_obj, teapot_model, _materials[_material_index]);
         render_object(floor_obj, floor_model, woodfloor);
         gbuffer_fb.unbind();
-        prev_projection = projection;
         prev_view = view;
     }    
 
