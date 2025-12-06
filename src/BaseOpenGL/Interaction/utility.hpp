@@ -46,19 +46,28 @@ namespace utility
         }
     }
 
-    inline bool checkCompileErrors(GLuint id, std::string type)
+    inline bool compile_check(GLuint id, std::string& err)
     {
         GLint success;
         GLchar infoLog[1024];
-        auto& check = type != "PROGRAME" ? glGetShaderiv : glGetProgramiv;
-        auto status = type != "PROGRAME" ? GL_COMPILE_STATUS : GL_LINK_STATUS;
-        check(id, status, &success);
+        glGetShaderiv(id, GL_COMPILE_STATUS, &success);
         if (!success)
         {
             glGetShaderInfoLog(id, 1024, NULL, infoLog);
-            std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "->\n" << infoLog << std::endl;
-            LOG.info("\nSHADER_COMPILATION_ERROR of type: " + type + "\n" + infoLog);
-            return false;
+            err = std::string{ infoLog };
+        }
+        return success;
+    }
+
+    inline bool link_check(GLuint id, std::string& err)
+    {
+        GLint success;
+        GLchar infoLog[1024];
+        glGetProgramiv(id, GL_LINK_STATUS, &success);
+        if (!success)
+        {
+            glGetProgramInfoLog(id, 1024, NULL, infoLog);
+            err = std::string{ infoLog };
         }
         return success;
     }

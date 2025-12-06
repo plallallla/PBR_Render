@@ -78,12 +78,10 @@ public:
     void link(std::string_view info)
     {
         glLinkProgram(_id);
-        GLchar infoLog[1024];
-        if (!utility::checkCompileErrors(_id, std::string{"PROGRAME:"}))
+        std::string err;
+        if (!utility::link_check(_id, err))
         {
-            glGetShaderInfoLog(_id, 1024, NULL, infoLog);
-            LOG.info(std::string{"\nSHADER_LINK_ERROR of type["} + info.data() + "]\n" + infoLog);
-            // throw std::runtime_error("\nSHADER_COMPILATION_ERROR of type: " + info.data());
+            LOG.info(std::string{info.data()} + " has link error : " + err);
         }
     }
 

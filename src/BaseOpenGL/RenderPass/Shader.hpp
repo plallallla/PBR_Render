@@ -30,7 +30,11 @@ public:
         _id = glCreateShader(_type);
         glShaderSource(_id, 1, &vShaderCode, NULL);
         glCompileShader(_id);
-        utility::checkCompileErrors(_id, _name[_type]);
+        std::string err;
+        if (!utility::compile_check(_id, err))
+        {
+            LOG.info(_name[_type] + " has compile error : " + err);
+        }
     }
 
     inline bool empty() const
@@ -46,7 +50,7 @@ public:
 private:
     GLuint _type;
     GLuint _id = 0;
-    std::unordered_map<GLuint, std::string> _name
+    inline static std::unordered_map<GLuint, std::string> _name
     {
         {GL_VERTEX_SHADER,"GL_VERTEX_SHADER"},
         {GL_FRAGMENT_SHADER,"GL_FRAGMENT_SHADER"},
