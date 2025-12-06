@@ -181,6 +181,7 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(8, "d_shadow_text");
         light_sp.set_sampler(9, "p_shadow_text");
 
+        auto frag_size = glm::vec2(1.0 / _width, 1.0 / _height);
         // common postprocess set
         _display_pass.set(_width, _height);
         _color_correction_pass.set(_width, _height);
@@ -189,14 +190,14 @@ class PBR_render : public GLWidget
         _fxaa_pass._enable = true;
         _fxaa_pass.set(_width, _height);
         _fxaa_pass._sp.use();
-        _fxaa_pass._sp.set_uniform("frag_size", glm::vec2(1.0 / _width, 1.0 / _height));
+        _fxaa_pass._sp.set_uniform("frag_size", frag_size);
         // motion blur
         _motion_blur_pass._enable = false;
         _motion_blur_pass.set(_width, _height);
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
-        _motion_blur_pass._sp.set_uniform("frag_size", glm::vec2(1.0 / _width, 1.0 / _height));
+        _motion_blur_pass._sp.set_uniform("frag_size", frag_size);
         // bloom blur
         _h_bloom_blur_pass.set(_width, _height);
         _h_bloom_blur_pass._enable = true;
@@ -211,13 +212,15 @@ class PBR_render : public GLWidget
         _mixture_pass._sp.set_sampler(1, "screenTexture2");
         // sao
         _sao_compute_pass._enable = true;
-        _sao_compute_pass.set(_width, _height, TEXTURE_2D_R);
+        _sao_compute_pass.set(_width, _height, TEXTURE_2D_FLOAT);
         _sao_compute_pass._sp.use();
         _sao_compute_pass._sp.set_uniform("max_mipmap_level", std::floor(glm::log2(1.f * std::max(_width, _height))));
         _sao_compute_pass._sp.set_sampler(0, "s_position");
         _sao_compute_pass._sp.set_sampler(1, "s_normal");
+
         _sao_blur_pass.set(_width, _height);
         _sao_blur_pass._sp.use();
+        _sao_blur_pass._sp.set_uniform("frag_size", frag_size);
         _sao_blur_pass._sp.set_sampler(0, "screenTexture");
         _sao_blur_pass._sp.set_sampler(1, "sao_result");
 
@@ -383,6 +386,12 @@ class PBR_render : public GLWidget
         geometry_render();
         light_render();
         _display_pass.render(postprocess(light_result_texture));
+
+        // _sao_compute_pass.execute({gbtx_position, gbtx_normal});
+        // _sao_blur_pass.execute({light_result_texture, _sao_compute_pass});
+        // _display_pass.render(_sao_blur_pass);
+
+
     }
 
     virtual void gui_operation() override

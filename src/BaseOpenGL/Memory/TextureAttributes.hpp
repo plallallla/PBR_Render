@@ -30,14 +30,14 @@ struct TextureAttributes
     bool _mipmap{ true };
 };
 
-inline auto TEXTURE_2D_R = [] () -> TextureAttributes
+inline auto TEXTURE_2D_FLOAT = [] () -> TextureAttributes
 {
     return
     {
         GL_TEXTURE_2D,
         {GL_REPEAT, GL_REPEAT,},
-        {GL_LINEAR, GL_LINEAR,},
-        {GL_R8, GL_R, GL_UNSIGNED_BYTE},
+        {GL_NEAREST, GL_NEAREST,},
+        {GL_R16F, GL_RGB, GL_FLOAT},
         true
     };
 }();

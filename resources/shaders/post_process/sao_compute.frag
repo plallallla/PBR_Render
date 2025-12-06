@@ -19,10 +19,11 @@ void main(void)
 {
     float sao_occlusion = 0.0;
     vec3 position = texture(s_position, uv).xyz;
+    float depth = texture(s_position, uv).w;
     vec3 normal = normalize(texture(s_normal, uv).rgb);
     ivec2 offset = ivec2(gl_FragCoord.xy);
     float phi = (30 * offset.x ^ offset.y + 10 * offset.x * offset.y);// 确定性哈希避免产生规律性噪点
-    float screen_radius = -sao_radius * 3500.0 / position.z;
+    float screen_radius = 15;
     for (int i = 0; i < sample_ct; i++)
     {
         // 确定当前阿基米德螺线采样点
@@ -32,12 +33,12 @@ void main(void)
         float sample_distance = screen_radius * alpha;
         // Mipmap自适应LOD生成采样点
         int mipmap_level = clamp(findMSB(int(sample_distance)) - 4, 0, max_mipmap_level);
-        vec3 sample_pt = texelFetch(s_position, ivec2(sample_distance * sample_direction + gl_FragCoord.xy) >> mipmap_level, mipmap_level).xyz;
+        vec3 sample_pt = textureLod(s_position, uv + sample_direction * screen_radius * alpha, mipmap_level).xyz;
         vec3 sao_V = sample_pt - position;
         float VdotN = dot(sao_V, normal);
         float VdotV = dot(sao_V, sao_V);
         // AlchemyAO obscurance estimator : max(0, dot(V, N) + bias) / (|V|² + ε)
-        sao_occlusion += max(0.0f, VdotN + (position.z * sao_bias)) / (VdotV + sao_epsilon);
+        sao_occlusion += max(0.0f, VdotN + (depth * sao_bias)) / (VdotV + sao_epsilon);
     }
     o_sao = sao_occlusion;
 }
