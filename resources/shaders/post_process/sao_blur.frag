@@ -1,6 +1,6 @@
 #version 400 core
 
-out vec4 FragColor;
+out float o_sao_blur;
 in vec2 uv;
 
 uniform sampler2D screenTexture;
@@ -14,10 +14,10 @@ void main()
    {
       for (int y = 0; y < blur_size; ++y)
       {
-         vec2 offset = (vec2(-2.0) + vec2(float(x), float(y))) * frag_size;
-         result += texture(screenTexture, uv + offset).r;
+        vec2 offset = (vec2(-2.0) + vec2(float(x), float(y))) * frag_size;
+        result += texture(screenTexture, uv + offset).r;
       }
    }
 
-   saoBlurOutput = result / float(blur_size * blur_size);
+   o_sao_blur = result / float(blur_size * blur_size);
 }

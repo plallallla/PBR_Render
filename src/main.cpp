@@ -147,7 +147,9 @@ class PBR_render : public GLWidget
         // gbuffer set
         gbuffer_fb.bind();
         gbuffer_fb.create_render_object(_width, _height);
-        gbtx_position = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, TEXTURE_2D_RGBA16F);
+        auto pos_att = TEXTURE_2D_RGBA16F;
+        pos_att._mipmap = true;// 开启mipmap用于AlchemyAO
+        gbtx_position = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, pos_att);
         gbuffer_fb.attach_color_texture(0, gbtx_position);
         gbtx_albdeo = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, TEXTURE_2D_RGBA);
         gbuffer_fb.attach_color_texture(1, gbtx_albdeo);
