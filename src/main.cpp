@@ -12,6 +12,7 @@
 #include "TextureAttributes.hpp"
 #include "VertexArray.hpp"
 #include "utility.hpp"
+#include <cmath>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
@@ -208,6 +209,17 @@ class PBR_render : public GLWidget
         _mixture_pass._sp.use();
         _mixture_pass._sp.set_sampler(0, "screenTexture1");
         _mixture_pass._sp.set_sampler(1, "screenTexture2");
+        // sao
+        _sao_compute_pass._enable = true;
+        _sao_compute_pass.set(_width, _height, TEXTURE_2D_R);
+        _sao_compute_pass._sp.use();
+        _sao_compute_pass._sp.set_uniform("max_mipmap_level", std::floor(glm::log2(1.f * std::max(_width, _height))));
+        _sao_compute_pass._sp.set_sampler(0, "s_position");
+        _sao_compute_pass._sp.set_sampler(1, "s_normal");
+        _sao_blur_pass.set(_width, _height);
+        _sao_blur_pass._sp.use();
+        _sao_blur_pass._sp.set_sampler(0, "screenTexture");
+        _sao_blur_pass._sp.set_sampler(1, "sao_result");
 
         projection = get_projection();
         view = CAMERA.get_view_matrix(); 
@@ -316,6 +328,12 @@ class PBR_render : public GLWidget
     // 颜色未校正 基于物理颜色处理
     GLuint physical_postprocess(GLuint input)
     {
+        if (_sao_compute_pass._enable)
+        {
+            _sao_compute_pass.execute({gbtx_position, gbtx_normal});
+            _sao_blur_pass.execute({input, _sao_compute_pass});
+            input = _sao_blur_pass;
+        }
         if (_bright_extraction_pass._enable)
         {
             _bright_extraction_pass._sp.use();
@@ -376,6 +394,7 @@ class PBR_render : public GLWidget
         ImGui::SliderFloat(u8"point light.x", &pl->position.x, -10.0, 10.0);
         ImGui::SliderFloat(u8"point light.y", &pl->position.y, 0.05, 10.0);
         ImGui::SliderFloat(u8"point light.z", &pl->position.z, -10.0, 10.0);
+        ImGui::Checkbox(u8"sao", &_sao_compute_pass._enable);
         ImGui::Checkbox(u8"bloom blur", &_bright_extraction_pass._enable);
         if (_bright_extraction_pass._enable)
         {
