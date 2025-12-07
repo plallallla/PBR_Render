@@ -116,6 +116,7 @@ class PBR_render : public GLWidget
     glm::mat4 projection;
     glm::mat4 view;
     glm::mat4 prev_view;
+    glm::mat3 normal_matrix;
 
     // 模型数据
     Model teapot_obj;
@@ -252,7 +253,7 @@ class PBR_render : public GLWidget
     {
         gbuffer_sp.set_uniform("model", model);
         gbuffer_sp.set_uniform("eye_position", CAMERA.get_position());
-        glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
+        normal_matrix = glm::mat3(glm::transpose(glm::inverse(model)));
         gbuffer_sp.set_uniform("normal_matrix", normal_matrix);
         gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
         gbuffer_sp.set_uniform("prev_proj_view_model", projection * prev_view * model);
@@ -333,6 +334,9 @@ class PBR_render : public GLWidget
     {
         if (_sao_compute_pass._enable)
         {
+            _sao_compute_pass._sp.use();
+            _sao_compute_pass._sp.set_uniform("position_transform", view);
+            _sao_compute_pass._sp.set_uniform("normal_transform", normal_matrix);
             _sao_compute_pass.execute({gbtx_position, gbtx_normal});
             _sao_blur_pass.execute({input, _sao_compute_pass});
             input = _sao_blur_pass;
