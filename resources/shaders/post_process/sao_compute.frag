@@ -13,19 +13,14 @@ const int sample_ct = 16;
 uniform sampler2D s_position;
 uniform sampler2D s_normal;
 uniform int max_mipmap_level;
-uniform mat4 position_transform;
-uniform mat3 normal_transform;
 
 void main(void)
 {
     float sao_occlusion = 0.0;
-    // vec3 position = (position_transform * texture(s_position, uv)).xyz;
-    // vec3 normal = normalize(normal_transform * texture(s_normal, uv).xyz);
     vec3 position = texture(s_position, uv).xyz;
     vec3 normal = texture(s_normal, uv).xyz;
     ivec2 offset = ivec2(gl_FragCoord.xy);
-    // float phi = (30 * offset.x ^ offset.y + 10 * offset.x * offset.y);// 确定性哈希避免产生规律性噪点
-    float screen_radius = -1050.0 / position.z;
+    float screen_radius = 10.0;
     for (int i = 0; i < sample_ct; i++)
     {
         // 确定当前阿基米德螺线采样点
@@ -36,7 +31,8 @@ void main(void)
         float sample_distance = screen_radius * alpha;
         // Mipmap自适应LOD生成采样点
         int mipmap_level = clamp(findMSB(int(sample_distance)) - 4, 0, max_mipmap_level);
-        vec3 sample_pt = (position_transform * textureLod(s_position, uv + sample_direction * screen_radius * alpha, mipmap_level)).xyz;
+        vec2 uv_offset = sample_direction * sample_distance >> mipmap_level;
+        vec3 sample_pt = texture(s_position, uv + uv_offset).xyz;
         vec3 sao_V = sample_pt - position;
         float VdotN = dot(sao_V, normal) + sao_bias;
         float VdotV = dot(sao_V, sao_V);

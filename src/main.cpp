@@ -337,6 +337,7 @@ class PBR_render : public GLWidget
             _sao_compute_pass._sp.use();
             _sao_compute_pass._sp.set_uniform("position_transform", view);
             _sao_compute_pass._sp.set_uniform("normal_transform", normal_matrix);
+            _sao_compute_pass._sp.set_uniform("eye_position", CAMERA.get_position());
             _sao_compute_pass.execute({gbtx_position, gbtx_normal});
             _sao_blur_pass.execute({input, _sao_compute_pass});
             input = _sao_blur_pass;
