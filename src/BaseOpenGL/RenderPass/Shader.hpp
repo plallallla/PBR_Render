@@ -33,7 +33,7 @@ public:
         std::string err;
         if (!utility::compile_check(_id, err))
         {
-            LOG.info(_name[_type] + " has compile error : " + err);
+            LOG.info(_name[_type] + " has compile error\n" + err);
         }
     }
 

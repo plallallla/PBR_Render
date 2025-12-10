@@ -81,7 +81,7 @@ public:
         std::string err;
         if (!utility::link_check(_id, err))
         {
-            LOG.info(std::string{info.data()} + " has link error : " + err);
+            LOG.info(std::string{info.data()} + " has link error\n" + err);
         }
     }
 
