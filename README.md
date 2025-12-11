@@ -2,11 +2,11 @@
 
 ### 0. why
 
-这是一个基于C++与OpenGL实现的光栅化的PBR渲染器，基本涵盖了经典教程[LearnOpenGL](https://learnopengl-cn.github.io)中的绝大多数内容，如果你学习完基本的一些图形学知识与教学内容，可以参考这个作为一次综合实践。
+这是一个基于C++与OpenGL实现的光栅化的PBR渲染器，基本涵盖了经典教程[LearnOpenGL](https://learnopengl-cn.github.io)中的绝大多数内容，并且参考了部分工业界实践过程中的一些经典处理方法。如果你学习完基本的一些图形学知识与教学内容，可以参考这个作为一次综合的实践。
 
 ### 1. what
 
-这个项目主要基于***OpenGL 4.0***进行，使用光栅化实现了***微表面模型***的PBR渲染，流程上主要采用了***延迟渲染管线***实现，支持漫反射辐照度 与镜面预卷积的***IBL***。
+这个项目主要基于***OpenGL 4.0***进行，使用光栅化实现了***微表面模型***的PBR渲染，流程上主要采用了***延迟渲染管线***实现，支持漫反射辐照度 与镜面预卷积的***IBL***，集成了一些***常见后处理效果***。
 
 渲染器主要有以下特性
 
@@ -21,7 +21,7 @@
   - Cube
   - HDR
   - 2D
-- 模型
+- Model
   - .obj
 - Material
   - Cook-Torrance BRDF
@@ -30,7 +30,7 @@
     - Roughness
     - Metalness
     - AO
-  - Phong
+  - Phong(未应用)
     - ambient
     - diffuse
     - specular
@@ -97,6 +97,13 @@ TODO：补充实现博客
   - 微表面模型brdf
   - IBL
   - 光源与阴影
+- 后处理
+  - Motion Blur
+  - FXAA
+  - Bloom
+  - SAO(AlchemyAO)
+  - Color Correction 
+  
 
 ### 3. reference
 

@@ -12,7 +12,6 @@
 #include "TextureAttributes.hpp"
 #include "VertexArray.hpp"
 #include "utility.hpp"
-#include <cmath>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
