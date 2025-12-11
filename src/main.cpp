@@ -215,7 +215,6 @@ class PBR_render : public GLWidget
         _sao_compute_pass._enable = true;
         _sao_compute_pass.set(_width, _height, TEXTURE_2D_FLOAT);
         _sao_compute_pass._sp.use();
-        _sao_compute_pass._sp.set_uniform("max_mipmap_level", std::floor(glm::log2(1.f * std::max(_width, _height))));
         _sao_compute_pass._sp.set_sampler(0, "s_position");
         _sao_compute_pass._sp.set_sampler(1, "s_normal");
 
@@ -381,6 +380,7 @@ class PBR_render : public GLWidget
 
     GLuint postprocess(GLuint input)
     {
+        return physical_postprocess(input);
         _color_correction_pass.execute(physical_postprocess(input));
         return visiual_postprocess(_color_correction_pass);
     }
@@ -391,12 +391,6 @@ class PBR_render : public GLWidget
         geometry_render();
         light_render();
         _display_pass.render(postprocess(light_result_texture));
-
-        // _sao_compute_pass.execute({gbtx_position, gbtx_normal});
-        // _sao_blur_pass.execute({light_result_texture, _sao_compute_pass});
-        // _display_pass.render(_sao_blur_pass);
-
-
     }
 
     virtual void gui_operation() override
