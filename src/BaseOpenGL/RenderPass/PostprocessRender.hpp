@@ -28,7 +28,7 @@ public:
             TEXTURE_MANAGER.delete_texture(_result);
         }
         _result = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, attributes);       
-    }
+    }   
     void execute(GLuint input = 0)
     {
         _fb.bind();

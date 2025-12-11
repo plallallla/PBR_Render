@@ -40,6 +40,7 @@
   - Instance
   - TODO:forward for transparent
 - IBL
+  - SAO
   - Diffuse irradiance
   - Specular IBL
 - Lighting
@@ -57,11 +58,10 @@
     - PCF
     - TODO:PCSS
 - Post Process
-  - TODO:SAO
   - Anti-aliasing
     - FXAA
     - TODO:TAA
-  - TODO:Bloom
+  - Bloom
   - Motion blur
 - 其他
   - spdlog

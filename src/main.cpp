@@ -112,11 +112,15 @@ class PBR_render : public GLWidget
     // sao
     PostprocessRender _sao_compute_pass{ SHADERS_PATH + "post_process/sao_compute.frag" };
     PostprocessRender _sao_blur_pass{ SHADERS_PATH + "post_process/sao_blur.frag" };
+    // sao debug
+    PostprocessRender _single_channel_debug{ SHADERS_PATH + "post_process/single_channel_debug.frag" };
+
 
     glm::mat4 projection;
     glm::mat4 view;
     glm::mat4 prev_view;
     glm::mat3 normal_matrix;
+    glm::vec2 _frag_size;
 
     // 模型数据
     Model teapot_obj;
@@ -181,24 +185,26 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(7, "env_cube");     
         light_sp.set_sampler(8, "d_shadow_text");
         light_sp.set_sampler(9, "p_shadow_text");
+        light_sp.set_sampler(10, "sao_result");
 
-        auto frag_size = glm::vec2(1.0 / _width, 1.0 / _height);
+        _frag_size = glm::vec2(1.0 / _width, 1.0 / _height);
         // common postprocess set
         _display_pass.set(_width, _height);
         _color_correction_pass.set(_width, _height);
         _depth24_debug.set(_width, _height);
+        _single_channel_debug.set(_width, _height);
         // fxaa
         _fxaa_pass._enable = true;
         _fxaa_pass.set(_width, _height);
         _fxaa_pass._sp.use();
-        _fxaa_pass._sp.set_uniform("frag_size", frag_size);
+        _fxaa_pass._sp.set_uniform("frag_size", _frag_size);
         // motion blur
         _motion_blur_pass._enable = false;
         _motion_blur_pass.set(_width, _height);
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
-        _motion_blur_pass._sp.set_uniform("frag_size", frag_size);
+        _motion_blur_pass._sp.set_uniform("frag_size", _frag_size);
         // bloom blur
         _h_bloom_blur_pass.set(_width, _height);
         _h_bloom_blur_pass._enable = true;
@@ -220,9 +226,8 @@ class PBR_render : public GLWidget
 
         _sao_blur_pass.set(_width, _height);
         _sao_blur_pass._sp.use();
-        _sao_blur_pass._sp.set_uniform("frag_size", frag_size);
-        _sao_blur_pass._sp.set_sampler(0, "screenTexture");
-        _sao_blur_pass._sp.set_sampler(1, "sao_result");
+        _sao_blur_pass._sp.set_uniform("frag_size", _frag_size);
+        _sao_blur_pass._sp.set_sampler(0, "sao_compute_result");
 
         projection = get_projection();
         view = CAMERA.get_view_matrix(); 
@@ -276,7 +281,7 @@ class PBR_render : public GLWidget
         render_object(floor_obj, floor_model, woodfloor);
         gbuffer_fb.unbind();
         prev_view = view;
-    }    
+    }
 
     void light_render()
     {
@@ -310,6 +315,8 @@ class PBR_render : public GLWidget
         light_sp.active_sampler(7, equirect_pass, GL_TEXTURE_CUBE_MAP);
         light_sp.active_sampler(8, direction_shadow);
         light_sp.active_sampler(9, point_shadow, GL_TEXTURE_CUBE_MAP);
+        light_sp.set_uniform("sao_enable", _sao_compute_pass._enable);
+        light_sp.active_sampler(10, _sao_blur_pass);
         // render
         VertexArray::render_empty_va();     
         // forawrd render light object
@@ -331,16 +338,6 @@ class PBR_render : public GLWidget
     // 颜色未校正 基于物理颜色处理
     GLuint physical_postprocess(GLuint input)
     {
-        if (_sao_compute_pass._enable)
-        {
-            _sao_compute_pass._sp.use();
-            _sao_compute_pass._sp.set_uniform("position_transform", view);
-            _sao_compute_pass._sp.set_uniform("normal_transform", normal_matrix);
-            _sao_compute_pass._sp.set_uniform("eye_position", CAMERA.get_position());
-            _sao_compute_pass.execute({gbtx_position, gbtx_normal});
-            _sao_blur_pass.execute({input, _sao_compute_pass});
-            input = _sao_blur_pass;
-        }
         if (_bright_extraction_pass._enable)
         {
             _bright_extraction_pass._sp.use();
@@ -380,15 +377,30 @@ class PBR_render : public GLWidget
 
     GLuint postprocess(GLuint input)
     {
-        return physical_postprocess(input);
         _color_correction_pass.execute(physical_postprocess(input));
         return visiual_postprocess(_color_correction_pass);
+    }
+
+    void sao_compute()
+    {
+        _sao_compute_pass._sp.use();
+        _sao_compute_pass._sp.set_uniform("position_transform", view);
+        _sao_compute_pass._sp.set_uniform("normal_transform", normal_matrix);
+        _sao_compute_pass._sp.set_uniform("eye_position", CAMERA.get_position());
+        _sao_compute_pass.execute({gbtx_position, gbtx_normal});
+        _sao_blur_pass._sp.use();
+        _sao_blur_pass._sp.set_uniform("frag_size", _frag_size);
+        _sao_blur_pass.execute(_sao_compute_pass);
     }
 
     virtual void render_loop() override
     {
         shadow_compute();
         geometry_render();
+        if (_sao_compute_pass._enable)
+        {
+            sao_compute();   
+        }
         light_render();
         _display_pass.render(postprocess(light_result_texture));
     }

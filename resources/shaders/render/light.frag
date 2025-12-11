@@ -13,8 +13,11 @@ uniform samplerCube ibl_convolution;
 uniform samplerCube ibl_prefilter;
 uniform sampler2D ibl_brdf_lut;
 uniform samplerCube env_cube;
+uniform sampler2D sao_result;
 
 uniform vec3 eye_position;
+
+uniform bool sao_enable;
 
 struct DirectionLight
 {
@@ -166,8 +169,8 @@ vec3 indirect_irradiance(vec3 N, vec3 V, vec3 albedo, vec3 F0, float roughness, 
     // specular
     vec3 prefilter = textureLod(ibl_prefilter, R,  roughness * MAX_REFLECTION_LOD).rgb;
     vec2 brdf = texture(ibl_brdf_lut, vec2(NdotV, roughness)).xy;
-    vec3 specular = (F_env * brdf.x + brdf.y) * ao * prefilter;
-    return diffuse + specular;
+    vec3 specular = (F_env * brdf.x + brdf.y) * prefilter;
+    return (diffuse + specular) * ao;
 }
 
 void main()
@@ -188,7 +191,7 @@ void main()
     vec3 N = normalize(normal);
     vec3 V = normalize(eye_position - world_space_position);
     vec3 R = reflect(-V, N); 
-    vec3 F0 = vec3(0.04); 
+    vec3 F0 = vec3(0.04);
     F0 = mix(F0, albedo, metallic);
     vec3 Lo = vec3(0.0);
     // directional light
@@ -208,8 +211,11 @@ void main()
     Lo += direct_irradiance(radiance, albedo, V, N, L, F0, roughness, metallic) * visibility;
     // ibl
     float ao = texture(s_effects, uv).r;
+    if (sao_enable)
+    {
+        ao *= texture(sao_result, uv).r;
+    }
     vec3 ibl = indirect_irradiance(N, V, albedo, F0, roughness, metallic, ao);
     // mix
     fragment_color = vec4(Lo + ibl, 1.0);
-    return;
 }
