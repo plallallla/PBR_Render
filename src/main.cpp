@@ -1,24 +1,15 @@
-#include "Camera.hpp"
-#include "FrameBuffer.hpp"
-#include "GLWidget.hpp"
-#include "PrecomputedRender.hpp"
-#include "PostprocessRender.hpp"
-#include "ShaderProgram.hpp"
-#include "Shadow.hpp"
-#include "Shape.hpp"
-#include "SkyboxRender.hpp"
-#include "Material.hpp"
-#include "Texture.hpp"
-#include "TextureAttributes.hpp"
-#include "VertexArray.hpp"
-#include "utility.hpp"
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
 #include <imgui.h>
 #include <vector>
 
+#include "PrecomputedRender.hpp"
+#include "PostprocessRender.hpp"
+#include "Shadow.hpp"
+#include "SkyboxRender.hpp"
 #include "Model.hpp"
+#include "Material.hpp"
 
 class PBR_render : public GLWidget
 {
@@ -32,6 +23,7 @@ class PBR_render : public GLWidget
     };
     Material woodfloor{TEXTURE_PATH + "pbr/woodfloor"};
     int _material_index{0};
+    int _shadow_index{0};
 
     // 天空盒渲染pass
     GLuint _input_hdr = TEXTURE_MANAGER.auto_load_texture(TEXTURE_PATH + "hdr/newport_loft.hdr");
@@ -114,6 +106,8 @@ class PBR_render : public GLWidget
     // sao debug
     PostprocessRender _single_channel_debug{ SHADERS_PATH + "post_process/single_channel_debug.frag" };
 
+    // debug
+    bool _debug_sao{false};
 
     glm::mat4 projection;
     glm::mat4 view;
@@ -398,7 +392,12 @@ class PBR_render : public GLWidget
         geometry_render();
         if (_sao_compute_pass._enable)
         {
-            sao_compute();   
+            sao_compute();
+            if (_debug_sao)
+            {
+                _single_channel_debug.render(_sao_blur_pass);
+                return;
+            }
         }
         light_render();
         _display_pass.render(postprocess(light_result_texture));
@@ -406,6 +405,8 @@ class PBR_render : public GLWidget
 
     virtual void gui_operation() override
     {
+        const char* material_items[] = { u8"rusted iron", u8"gold", u8"plastic", u8"wall" };
+        ImGui::Combo("Teapot Material", &_material_index, material_items, IM_ARRAYSIZE(material_items));        
         DirectionalLight* dl = std::get_if<DirectionalLight>(&direction_light.detail);
         ImGui::SliderFloat(u8"direction light.x", &dl->direction.x, -10.0, 10.0);
         ImGui::SliderFloat(u8"direction light.z", &dl->direction.z, -10.0, 10.0);
@@ -414,6 +415,11 @@ class PBR_render : public GLWidget
         ImGui::SliderFloat(u8"point light.y", &pl->position.y, 0.05, 10.0);
         ImGui::SliderFloat(u8"point light.z", &pl->position.z, -10.0, 10.0);
         ImGui::Checkbox(u8"sao", &_sao_compute_pass._enable);
+        if (_sao_compute_pass._enable)
+        {
+            ImGui::Checkbox(u8"debug render sao", &_debug_sao);
+        }
+        if (_debug_sao) return;
         ImGui::Checkbox(u8"bloom blur", &_bright_extraction_pass._enable);
         if (_bright_extraction_pass._enable)
         {
@@ -421,8 +427,6 @@ class PBR_render : public GLWidget
         }
         ImGui::Checkbox(u8"motion blur", &_motion_blur_pass._enable);
         ImGui::Checkbox(u8"fxaa", &_fxaa_pass._enable);
-        const char* items[] = { u8"rusted iron", u8"gold", u8"plastic", u8"wall" };
-        ImGui::Combo("Material", &_material_index, items, IM_ARRAYSIZE(items));
     }
 
 public:
