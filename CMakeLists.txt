@@ -1,16 +1,11 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.16)
 
 project(PBR_Render VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-include_directories(src/BaseOpenGL)
-include_directories(src/BaseOpenGL/Memory)
-include_directories(src/BaseOpenGL/Interaction)
-include_directories(src/BaseOpenGL/RenderPass)
-include_directories(src/BaseOpenGL/Light)
-include_directories(src/BaseOpenGL/Scene)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 find_package(glad CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
@@ -20,12 +15,5 @@ find_package(spdlog CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 
-
-add_executable(PBR_Render src/main.cpp)
-
-target_compile_definitions(PBR_Render PRIVATE TEXTURE_PATH=std::string{"../resources/textures/"})
-target_compile_definitions(PBR_Render PRIVATE OBJ_PATH=std::string{"../resources/obj/"})
-target_compile_definitions(PBR_Render PRIVATE SHADERS_PATH=std::string{"../resources/shaders/"})
-
-target_link_libraries(PBR_Render PRIVATE glfw glad::glad assimp::assimp spdlog::spdlog_header_only imgui::imgui)
-target_include_directories(PBR_Render PRIVATE ${Stb_INCLUDE_DIR})
+add_subdirectory(src/BaseOpenGL)
+add_subdirectory(src)

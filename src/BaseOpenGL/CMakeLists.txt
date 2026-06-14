@@ -1,0 +1,16 @@
+file(GLOB_RECURSE BASE_OPENGL_HEADERS CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+)
+
+add_library(BaseOpenGL INTERFACE)
+target_include_directories(BaseOpenGL INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/Memory
+    ${CMAKE_CURRENT_SOURCE_DIR}/Interaction
+    ${CMAKE_CURRENT_SOURCE_DIR}/RenderPass
+    ${CMAKE_CURRENT_SOURCE_DIR}/Light
+    ${CMAKE_CURRENT_SOURCE_DIR}/Scene
+)
+target_sources(BaseOpenGL INTERFACE ${BASE_OPENGL_HEADERS})
+target_link_libraries(BaseOpenGL INTERFACE glm::glm)
