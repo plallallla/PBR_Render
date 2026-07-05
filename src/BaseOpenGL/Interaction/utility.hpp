@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
@@ -28,6 +29,41 @@ private: \
 
 namespace utility
 {
+    inline bool gl_debug_marker_supported()
+    {
+        return GLAD_GL_VERSION_4_3 && glPushDebugGroup != nullptr && glPopDebugGroup != nullptr;
+    }
+
+    class GLDebugGroup
+    {
+        bool _active{ false };
+
+    public:
+        explicit GLDebugGroup(std::string_view name)
+        {
+            if (gl_debug_marker_supported())
+            {
+                glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, static_cast<GLsizei>(name.size()), name.data());
+                _active = true;
+            }
+        }
+
+        ~GLDebugGroup()
+        {
+            if (_active)
+            {
+                glPopDebugGroup();
+            }
+        }
+    };
+
+    inline void label_gl_object(GLenum identifier, GLuint name, std::string_view label)
+    {
+        if (GLAD_GL_VERSION_4_3 && name != 0 && glObjectLabel != nullptr)
+        {
+            glObjectLabel(identifier, name, static_cast<GLsizei>(label.size()), label.data());
+        }
+    }
 
     inline void read_file(std::string_view path, std::string& content)
     {

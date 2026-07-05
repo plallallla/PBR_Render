@@ -12,7 +12,7 @@ target_link_libraries(PBR_Render PRIVATE
 target_include_directories(PBR_Render PRIVATE ${Stb_INCLUDE_DIR})
 
 target_compile_definitions(PBR_Render PRIVATE
-    TEXTURE_PATH=std::string{"../resources/textures/"}
-    OBJ_PATH=std::string{"../resources/obj/"}
-    SHADERS_PATH=std::string{"../resources/shaders/"}
+    TEXTURE_PATH=std::string{"${CMAKE_SOURCE_DIR}/resources/textures/"}
+    OBJ_PATH=std::string{"${CMAKE_SOURCE_DIR}/resources/obj/"}
+    SHADERS_PATH=std::string{"${CMAKE_SOURCE_DIR}/resources/shaders/"}
 )

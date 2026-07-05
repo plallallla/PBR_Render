@@ -123,14 +123,15 @@ class PBR_render : public GLWidget
 
     virtual void application() override
     {
+        utility::GLDebugGroup debug_group{ "Application Setup" };
 
         stbi_set_flip_vertically_on_load(true);
         
         // scene
-        teapot_obj.load_single_obj({"../resources/obj/teapot.obj"});
+        teapot_obj.load_single_obj(OBJ_PATH + "teapot.obj");
         teapot_model = glm::mat4(1.0);
         teapot_model = glm::translate(teapot_model, {0.0, 2.0, 0.0});
-        floor_obj.load_single_obj({"../resources/obj/floor.obj"});
+        floor_obj.load_single_obj(OBJ_PATH + "floor.obj");
         floor_model = glm::mat4(1.0);
         floor_model = glm::scale(floor_model, {50.0, 50.0, 50.0});
 
@@ -148,15 +149,20 @@ class PBR_render : public GLWidget
         // gbuffer set
         gbuffer_fb.bind();
         gbuffer_fb.create_render_object(fb_width, fb_height);
+        utility::label_gl_object(GL_FRAMEBUFFER, gbuffer_fb, "GBuffer Framebuffer");
         auto pos_att = TEXTURE_2D_RGBA16F;
         pos_att._mipmap = true;// 开启mipmap用于AlchemyAO
         gbtx_position = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, pos_att);
+        utility::label_gl_object(GL_TEXTURE, gbtx_position, "GBuffer Position");
         gbuffer_fb.attach_color_texture(0, gbtx_position);
         gbtx_albdeo = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGBA);
+        utility::label_gl_object(GL_TEXTURE, gbtx_albdeo, "GBuffer Albedo");
         gbuffer_fb.attach_color_texture(1, gbtx_albdeo);
         gbtx_normal = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGBA16F);
+        utility::label_gl_object(GL_TEXTURE, gbtx_normal, "GBuffer Normal");
         gbuffer_fb.attach_color_texture(2, gbtx_normal);
         gbtx_effects = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGB16F);
+        utility::label_gl_object(GL_TEXTURE, gbtx_effects, "GBuffer Effects");
         gbuffer_fb.attach_color_texture(3, gbtx_effects);
         gbuffer_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3});
         gbuffer_fb.checkFramebufferStatus();
@@ -166,7 +172,9 @@ class PBR_render : public GLWidget
         // light
         light_fb.bind();
         light_fb.create_render_object(fb_width, fb_height);
+        utility::label_gl_object(GL_FRAMEBUFFER, light_fb, "Lighting Framebuffer");
         light_result_texture = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGBA16F);
+        utility::label_gl_object(GL_TEXTURE, light_result_texture, "Lighting Result");
         light_fb.attach_color_texture(0, light_result_texture);
         light_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0});
         light_sp.use();
@@ -185,29 +193,39 @@ class PBR_render : public GLWidget
         _frag_size = glm::vec2(1.0f / fb_width, 1.0f / fb_height);
         // common postprocess set
         _display_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _display_pass, "PostProcess Display Result");
         _color_correction_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _color_correction_pass, "PostProcess Color Correction Result");
         _depth24_debug.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _depth24_debug, "PostProcess Depth Debug Result");
         _single_channel_debug.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _single_channel_debug, "PostProcess Single Channel Debug Result");
         // fxaa
         _fxaa_pass._enable = true;
         _fxaa_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _fxaa_pass, "PostProcess FXAA Result");
         _fxaa_pass._sp.use();
         _fxaa_pass._sp.set_uniform("frag_size", _frag_size);
         // motion blur
         _motion_blur_pass._enable = false;
         _motion_blur_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _motion_blur_pass, "PostProcess Motion Blur Result");
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
         _motion_blur_pass._sp.set_uniform("frag_size", _frag_size);
         // bloom blur
         _h_bloom_blur_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _h_bloom_blur_pass, "PostProcess Bloom Blur H Result");
         _h_bloom_blur_pass._enable = true;
         _v_bloom_blur_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _v_bloom_blur_pass, "PostProcess Bloom Blur V Result");
         _v_bloom_blur_pass._enable = true;
         _bright_extraction_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _bright_extraction_pass, "PostProcess Bright Extraction Result");
         _bright_extraction_pass._enable = true;
         _mixture_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _mixture_pass, "PostProcess Bloom Mixture Result");
         _mixture_pass._enable = true;
         _mixture_pass._sp.use();
         _mixture_pass._sp.set_sampler(0, "screenTexture1");
@@ -215,11 +233,13 @@ class PBR_render : public GLWidget
         // sao
         _sao_compute_pass._enable = true;
         _sao_compute_pass.set(fb_width, fb_height, TEXTURE_2D_FLOAT);
+        utility::label_gl_object(GL_TEXTURE, _sao_compute_pass, "SAO Compute Result");
         _sao_compute_pass._sp.use();
         _sao_compute_pass._sp.set_sampler(0, "s_position");
         _sao_compute_pass._sp.set_sampler(1, "s_normal");
 
         _sao_blur_pass.set(fb_width, fb_height);
+        utility::label_gl_object(GL_TEXTURE, _sao_blur_pass, "SAO Blur Result");
         _sao_blur_pass._sp.use();
         _sao_blur_pass._sp.set_uniform("frag_size", _frag_size);
         _sao_blur_pass._sp.set_sampler(0, "sao_compute_result");
@@ -228,24 +248,38 @@ class PBR_render : public GLWidget
         view = CAMERA.get_view_matrix(); 
         prev_view = view;
 
+        utility::label_gl_object(GL_TEXTURE, _input_hdr, "HDR Environment Input");
+        utility::label_gl_object(GL_TEXTURE, direction_shadow, "Directional Shadow Depth");
+        utility::label_gl_object(GL_TEXTURE, point_shadow, "Point Shadow Cube Depth");
+        utility::label_gl_object(GL_PROGRAM, gbuffer_sp.get_id(), "GBuffer Shader");
+        utility::label_gl_object(GL_PROGRAM, light_sp.get_id(), "Lighting Shader");
+        utility::label_gl_object(GL_PROGRAM, lighting_obj_sp.get_id(), "Forward Light Object Shader");
+
     }
 
     void shadow_compute()
     {
+        utility::GLDebugGroup debug_group{ "Shadow Passes" };
         // 计算方向阴影
-        direction_shadow.begin(std::get<DirectionalLight>(direction_light.detail).direction);
-        direction_shadow._sp.set_uniform("model", teapot_model);
-        teapot_obj.render_elements();
-        direction_shadow._sp.set_uniform("model", floor_model);
-        floor_obj.render_elements();
-        direction_shadow.end();
+        {
+            utility::GLDebugGroup pass_group{ "Directional Shadow Pass" };
+            direction_shadow.begin(std::get<DirectionalLight>(direction_light.detail).direction);
+            direction_shadow._sp.set_uniform("model", teapot_model);
+            teapot_obj.render_elements();
+            direction_shadow._sp.set_uniform("model", floor_model);
+            floor_obj.render_elements();
+            direction_shadow.end();
+        }
         // 计算点阴影
-        point_shadow.begin(std::get<PointLight>(point_light.detail).position);
-        point_shadow._sp.set_uniform("model", teapot_model);
-        teapot_obj.render_elements();
-        point_shadow._sp.set_uniform("model", floor_model);
-        floor_obj.render_elements();
-        point_shadow.end();
+        {
+            utility::GLDebugGroup pass_group{ "Point Shadow Pass" };
+            point_shadow.begin(std::get<PointLight>(point_light.detail).position);
+            point_shadow._sp.set_uniform("model", teapot_model);
+            teapot_obj.render_elements();
+            point_shadow._sp.set_uniform("model", floor_model);
+            floor_obj.render_elements();
+            point_shadow.end();
+        }
     }
 
     void render_object(Model& m, const glm::mat4 model, const Material& material)
@@ -262,6 +296,7 @@ class PBR_render : public GLWidget
 
     void geometry_render()
     {
+        utility::GLDebugGroup debug_group{ "GBuffer Pass" };
         view = CAMERA.get_view_matrix(); 
         gbuffer_fb.bind();
         set_framebuffer_viewport();
@@ -281,6 +316,7 @@ class PBR_render : public GLWidget
 
     void light_render()
     {
+        utility::GLDebugGroup debug_group{ "Lighting Pass" };
         light_fb.bind();
         set_framebuffer_viewport();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -336,22 +372,35 @@ class PBR_render : public GLWidget
     // 颜色未校正 基于物理颜色处理
     GLuint physical_postprocess(GLuint input)
     {
+        utility::GLDebugGroup debug_group{ "Physical PostProcess" };
         if (_bright_extraction_pass._enable)
         {
             _bright_extraction_pass._sp.use();
             _bright_extraction_pass._sp.set_uniform<float>("threshold", _bloom_bright_threshold);
-            _bright_extraction_pass.execute(input);
+            {
+                utility::GLDebugGroup pass_group{ "Bright Extraction Pass" };
+                _bright_extraction_pass.execute(input);
+            }
             GLuint bloom_blur_target = _bright_extraction_pass;    
             if (_h_bloom_blur_pass._enable && _v_bloom_blur_pass._enable) 
             {
                 for (int i = 0; i < 10; i++)
                 {
-                    _h_bloom_blur_pass.execute(bloom_blur_target);
-                    _v_bloom_blur_pass.execute(_h_bloom_blur_pass);
+                    {
+                        utility::GLDebugGroup pass_group{ "Horizontal Bloom Blur Pass" };
+                        _h_bloom_blur_pass.execute(bloom_blur_target);
+                    }
+                    {
+                        utility::GLDebugGroup pass_group{ "Vertical Bloom Blur Pass" };
+                        _v_bloom_blur_pass.execute(_h_bloom_blur_pass);
+                    }
                     bloom_blur_target = (GLuint)_v_bloom_blur_pass;
                 }
             }
-            _mixture_pass.execute({input, bloom_blur_target});
+            {
+                utility::GLDebugGroup pass_group{ "Bloom Mixture Pass" };
+                _mixture_pass.execute({input, bloom_blur_target});
+            }
             input = _mixture_pass;
         }
         return input;
@@ -360,13 +409,16 @@ class PBR_render : public GLWidget
     // 颜色已校正 基于视觉颜色处理
     GLuint visiual_postprocess(GLuint input)
     {
+        utility::GLDebugGroup debug_group{ "Visual PostProcess" };
         if (_motion_blur_pass._enable)
         {
+            utility::GLDebugGroup pass_group{ "Motion Blur Pass" };
             _motion_blur_pass.execute({input, gbtx_effects});
             input = _motion_blur_pass;
         }        
         if (_fxaa_pass._enable)
         {
+            utility::GLDebugGroup pass_group{ "FXAA Pass" };
             _fxaa_pass.execute(input);
             input = _fxaa_pass;
         }
@@ -375,20 +427,31 @@ class PBR_render : public GLWidget
 
     GLuint postprocess(GLuint input)
     {
-        _color_correction_pass.execute(physical_postprocess(input));
+        GLuint physical_result = physical_postprocess(input);
+        {
+            utility::GLDebugGroup pass_group{ "Color Correction Pass" };
+            _color_correction_pass.execute(physical_result);
+        }
         return visiual_postprocess(_color_correction_pass);
     }
 
     void sao_compute()
     {
+        utility::GLDebugGroup debug_group{ "SAO Passes" };
         _sao_compute_pass._sp.use();
         _sao_compute_pass._sp.set_uniform("position_transform", view);
         _sao_compute_pass._sp.set_uniform("normal_transform", normal_matrix);
         _sao_compute_pass._sp.set_uniform("eye_position", CAMERA.get_position());
-        _sao_compute_pass.execute({gbtx_position, gbtx_normal});
+        {
+            utility::GLDebugGroup pass_group{ "SAO Compute Pass" };
+            _sao_compute_pass.execute({gbtx_position, gbtx_normal});
+        }
         _sao_blur_pass._sp.use();
         _sao_blur_pass._sp.set_uniform("frag_size", _frag_size);
-        _sao_blur_pass.execute(_sao_compute_pass);
+        {
+            utility::GLDebugGroup pass_group{ "SAO Blur Pass" };
+            _sao_blur_pass.execute(_sao_compute_pass);
+        }
     }
 
     virtual void render_loop() override
@@ -400,12 +463,17 @@ class PBR_render : public GLWidget
             sao_compute();
             if (_debug_sao)
             {
+                utility::GLDebugGroup pass_group{ "SAO Debug Display Pass" };
                 _single_channel_debug.render(_sao_blur_pass);
                 return;
             }
         }
         light_render();
-        _display_pass.render(postprocess(light_result_texture));
+        GLuint final_texture = postprocess(light_result_texture);
+        {
+            utility::GLDebugGroup pass_group{ "Final Display Pass" };
+            _display_pass.render(final_texture);
+        }
     }
 
     virtual void gui_operation() override
