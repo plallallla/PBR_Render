@@ -1,5 +1,9 @@
 #pragma once
+#ifdef __APPLE__
 #include <OpenGL/gltypes.h>
+#else
+#include <glad/glad.h>
+#endif
 #include <cstddef>
 #include <glad/glad.h>
 #include <vector>

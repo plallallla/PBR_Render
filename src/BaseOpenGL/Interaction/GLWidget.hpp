@@ -38,6 +38,8 @@ protected:
     GLFWwindow* window{nullptr};
     int _width;
     int _height;
+    int _framebuffer_width{0};
+    int _framebuffer_height{0};
     int _debug_width{400};
     bool _gui{ false };
 
@@ -45,6 +47,19 @@ protected:
     {
         return glm::perspective(glm::radians(CAMERA.get_zoom()), (float)_width / (float)_height, 0.1f, 100.0f);
     }
+
+    void update_framebuffer_size()
+    {
+        glfwGetFramebufferSize(window, &_framebuffer_width, &_framebuffer_height);
+    }
+
+    void set_framebuffer_viewport() const
+    {
+        glViewport(0, 0, _framebuffer_width, _framebuffer_height);
+    }
+
+    int framebuffer_width() const { return _framebuffer_width; }
+    int framebuffer_height() const { return _framebuffer_height; }
 
 public:
     GLWidget(int width, int height, std::string_view title, bool gui = false) : _width(width), _height(height), _gui(gui)
@@ -77,6 +92,7 @@ public:
         {
             std::cout << "Failed to initialize GLAD" << std::endl;
         }
+        update_framebuffer_size();
         CAMERA.init();
         INPUT.init(width, height);
         // 初始化 ImGui
@@ -95,8 +111,8 @@ public:
     
     void update_viewport()
     {
-        glfwGetFramebufferSize(window, &_width, &_height);
-        glViewport(0, 0, _width, _height);          
+        update_framebuffer_size();
+        set_framebuffer_viewport();
     }    
 
     void render()
@@ -112,11 +128,11 @@ public:
                 ImGui_ImplOpenGL3_NewFrame();
                 ImGui_ImplGlfw_NewFrame();
                 ImGui::NewFrame();
-                ImGui::Begin("debug", nullptr, ImGuiWindowFlags_AlwaysUseWindowPadding 
-                    | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+                ImGui::Begin("debug", nullptr, ImGuiWindowFlags_NoSavedSettings
+                    | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
                 INPUT._debug = ImGui::IsWindowCollapsed();
                 ImGui::SetWindowPos(ImVec2(0, 0));           
-                ImGui::SetWindowSize(ImVec2(_debug_width, _height));           
+                ImGui::SetWindowSize(ImVec2(static_cast<float>(_debug_width), static_cast<float>(_height)));
                 gui_operation();
                 ImGui::End();
                 ImGui::Render();
@@ -125,6 +141,11 @@ public:
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
+    }
+
+    void enable_gui(bool enable_gui)
+    {
+        _gui = enable_gui;
     }
 
     ~GLWidget()

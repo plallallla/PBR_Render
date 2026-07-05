@@ -1,5 +1,9 @@
 #pragma once
+#ifdef __APPLE__
 #include <OpenGL/gltypes.h>
+#else
+#include <glad/glad.h>
+#endif
 #include <assimp/mesh.h>
 #include <assimp/scene.h>
 #include <cstddef>
@@ -85,14 +89,14 @@ public:
     void render_elements() const
     {
         _va.bind();
-        glDrawElements(GL_TRIANGLES, _elements_ct, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(_elements_ct), GL_UNSIGNED_INT, 0);
         _va.unbind();
     }
 
     void render_elements_instanced(GLsizei instance_count) const
     {
         _va.bind();
-        glDrawElementsInstanced(GL_TRIANGLES, _elements_ct, GL_UNSIGNED_INT, 0, instance_count);
+        glDrawElementsInstanced(GL_TRIANGLES, static_cast<GLsizei>(_elements_ct), GL_UNSIGNED_INT, 0, instance_count);
         _va.unbind();
     }
 };

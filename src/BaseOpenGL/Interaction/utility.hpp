@@ -35,7 +35,7 @@ namespace utility
         file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
         try
         {
-            file.open(path);
+            file.open(std::string{ path });
             std::stringstream ss;
             ss << file.rdbuf();
             content = ss.str();

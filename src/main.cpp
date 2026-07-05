@@ -52,8 +52,8 @@ class PBR_render : public GLWidget
 
     /* light & shadow */
     // 用于光线透视矩阵
-    float near_plane = 0.1;
-    float far_plane = 75.0;   
+    float near_plane = 0.1f;
+    float far_plane = 75.0f;
     // light data
     Light direction_light
     {
@@ -141,20 +141,22 @@ class PBR_render : public GLWidget
         equirect_pass.execute(_input_hdr);
         convolution_pass.execute(equirect_pass);
         prefilter_pass.execute(equirect_pass);
-        glfwGetFramebufferSize(window, &_width, &_height);     
+        update_framebuffer_size();
+        const int fb_width = framebuffer_width();
+        const int fb_height = framebuffer_height();
         
         // gbuffer set
         gbuffer_fb.bind();
-        gbuffer_fb.create_render_object(_width, _height);
+        gbuffer_fb.create_render_object(fb_width, fb_height);
         auto pos_att = TEXTURE_2D_RGBA16F;
         pos_att._mipmap = true;// 开启mipmap用于AlchemyAO
-        gbtx_position = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, pos_att);
+        gbtx_position = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, pos_att);
         gbuffer_fb.attach_color_texture(0, gbtx_position);
-        gbtx_albdeo = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, TEXTURE_2D_RGBA);
+        gbtx_albdeo = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGBA);
         gbuffer_fb.attach_color_texture(1, gbtx_albdeo);
-        gbtx_normal = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, TEXTURE_2D_RGBA16F);
+        gbtx_normal = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGBA16F);
         gbuffer_fb.attach_color_texture(2, gbtx_normal);
-        gbtx_effects = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, TEXTURE_2D_RGB16F);
+        gbtx_effects = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGB16F);
         gbuffer_fb.attach_color_texture(3, gbtx_effects);
         gbuffer_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3});
         gbuffer_fb.checkFramebufferStatus();
@@ -163,8 +165,8 @@ class PBR_render : public GLWidget
              
         // light
         light_fb.bind();
-        light_fb.create_render_object(_width, _height);
-        light_result_texture = TEXTURE_MANAGER.generate_texture_buffer(_width, _height, TEXTURE_2D_RGBA16F);
+        light_fb.create_render_object(fb_width, fb_height);
+        light_result_texture = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGBA16F);
         light_fb.attach_color_texture(0, light_result_texture);
         light_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0});
         light_sp.use();
@@ -180,44 +182,44 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(9, "p_shadow_text");
         light_sp.set_sampler(10, "sao_result");
 
-        _frag_size = glm::vec2(1.0 / _width, 1.0 / _height);
+        _frag_size = glm::vec2(1.0f / fb_width, 1.0f / fb_height);
         // common postprocess set
-        _display_pass.set(_width, _height);
-        _color_correction_pass.set(_width, _height);
-        _depth24_debug.set(_width, _height);
-        _single_channel_debug.set(_width, _height);
+        _display_pass.set(fb_width, fb_height);
+        _color_correction_pass.set(fb_width, fb_height);
+        _depth24_debug.set(fb_width, fb_height);
+        _single_channel_debug.set(fb_width, fb_height);
         // fxaa
         _fxaa_pass._enable = true;
-        _fxaa_pass.set(_width, _height);
+        _fxaa_pass.set(fb_width, fb_height);
         _fxaa_pass._sp.use();
         _fxaa_pass._sp.set_uniform("frag_size", _frag_size);
         // motion blur
         _motion_blur_pass._enable = false;
-        _motion_blur_pass.set(_width, _height);
+        _motion_blur_pass.set(fb_width, fb_height);
         _motion_blur_pass._sp.use();
         _motion_blur_pass._sp.set_sampler(0, "screenTexture");
         _motion_blur_pass._sp.set_sampler(1, "gEffects");
         _motion_blur_pass._sp.set_uniform("frag_size", _frag_size);
         // bloom blur
-        _h_bloom_blur_pass.set(_width, _height);
+        _h_bloom_blur_pass.set(fb_width, fb_height);
         _h_bloom_blur_pass._enable = true;
-        _v_bloom_blur_pass.set(_width, _height);
+        _v_bloom_blur_pass.set(fb_width, fb_height);
         _v_bloom_blur_pass._enable = true;
-        _bright_extraction_pass.set(_width, _height);
+        _bright_extraction_pass.set(fb_width, fb_height);
         _bright_extraction_pass._enable = true;
-        _mixture_pass.set(_width, _height);
+        _mixture_pass.set(fb_width, fb_height);
         _mixture_pass._enable = true;
         _mixture_pass._sp.use();
         _mixture_pass._sp.set_sampler(0, "screenTexture1");
         _mixture_pass._sp.set_sampler(1, "screenTexture2");
         // sao
         _sao_compute_pass._enable = true;
-        _sao_compute_pass.set(_width, _height, TEXTURE_2D_FLOAT);
+        _sao_compute_pass.set(fb_width, fb_height, TEXTURE_2D_FLOAT);
         _sao_compute_pass._sp.use();
         _sao_compute_pass._sp.set_sampler(0, "s_position");
         _sao_compute_pass._sp.set_sampler(1, "s_normal");
 
-        _sao_blur_pass.set(_width, _height);
+        _sao_blur_pass.set(fb_width, fb_height);
         _sao_blur_pass._sp.use();
         _sao_blur_pass._sp.set_uniform("frag_size", _frag_size);
         _sao_blur_pass._sp.set_sampler(0, "sao_compute_result");
@@ -262,6 +264,7 @@ class PBR_render : public GLWidget
     {
         view = CAMERA.get_view_matrix(); 
         gbuffer_fb.bind();
+        set_framebuffer_viewport();
         gbuffer_sp.use();
         glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_TRUE);
@@ -279,7 +282,7 @@ class PBR_render : public GLWidget
     void light_render()
     {
         light_fb.bind();
-        update_viewport();
+        set_framebuffer_viewport();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
@@ -287,7 +290,7 @@ class PBR_render : public GLWidget
         // geometry
         light_sp.set_uniform("eye_position", CAMERA.get_position());
         light_sp.set_uniform("cube_uv_trans", glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection));        
-        light_sp.set_uniform("fragment_size", glm::vec2(1.0 / _width, 1.0 / _height));
+        light_sp.set_uniform("fragment_size", _frag_size);
         light_sp.set_uniform("d_light_matrix", (glm::mat4)direction_shadow.get_light_matrix());
         // light
         light_sp.set_uniform("d_light.color", direction_light.irradiance);
@@ -315,7 +318,9 @@ class PBR_render : public GLWidget
         // forawrd render light object
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, light_fb);
-        glBlitFramebuffer(0, 0, _width, _height, 0, 0, _width, _height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        const int fb_width = framebuffer_width();
+        const int fb_height = framebuffer_height();
+        glBlitFramebuffer(0, 0, fb_width, fb_height, 0, 0, fb_width, fb_height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_TRUE);
         lighting_obj_sp.use();
@@ -438,6 +443,7 @@ public:
 int main()
 {
     PBR_render pbr_render_widget{900, 800, "pbr_render"};
+    pbr_render_widget.enable_gui(false);
     pbr_render_widget.render();
     return 0;
 }
