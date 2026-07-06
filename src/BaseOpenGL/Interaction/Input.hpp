@@ -17,6 +17,8 @@ struct Input
     float _last_frame_ts;
     float _delta_time;
     bool _debug{true};
+    bool _gui{true};
+    bool _enter_pressed{false};
     void init(unsigned int width, unsigned int height)
     {
         _last_x = width / 2.0f;
@@ -73,6 +75,17 @@ inline void mouse_move_callback(GLFWwindow* window, double xposIn, double yposIn
 
 inline void keyboard_input_callback(GLFWwindow *window)
 {
+    int enter_state = glfwGetKey(window, GLFW_KEY_ENTER);
+    if (enter_state == GLFW_PRESS && !INPUT._enter_pressed)
+    {
+        INPUT._gui = !INPUT._gui;
+        INPUT._debug = true;
+        INPUT._enter_pressed = true;
+    }
+    if (enter_state == GLFW_RELEASE)
+    {
+        INPUT._enter_pressed = false;
+    }
     if (!INPUT._debug)
     {
         return;

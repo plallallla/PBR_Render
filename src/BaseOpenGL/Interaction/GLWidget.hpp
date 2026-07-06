@@ -41,7 +41,6 @@ protected:
     int _framebuffer_width{0};
     int _framebuffer_height{0};
     int _debug_width{400};
-    bool _gui{ false };
 
     inline glm::mat4 get_projection()
     {
@@ -62,8 +61,9 @@ protected:
     int framebuffer_height() const { return _framebuffer_height; }
 
 public:
-    GLWidget(int width, int height, std::string_view title, bool gui = false) : _width(width), _height(height), _gui(gui)
+    GLWidget(int width, int height, std::string_view title, bool gui = true) : _width(width), _height(height)
     {
+        INPUT._gui = gui;
         static std::once_flag gloable_init;
         std::call_once(gloable_init, [&] () 
         {
@@ -128,7 +128,7 @@ public:
             keyboard_input_callback(window);
             INPUT.update_time();
             render_loop();
-            if (_gui)
+            if (INPUT._gui)
             {
                 ImGui_ImplOpenGL3_NewFrame();
                 ImGui_ImplGlfw_NewFrame();
@@ -148,9 +148,9 @@ public:
         }
     }
 
-    void enable_gui(bool enable_gui)
+    static void enable_gui(bool enable_gui)
     {
-        _gui = enable_gui;
+        INPUT._gui = enable_gui;
     }
 
     ~GLWidget()

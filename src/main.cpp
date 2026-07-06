@@ -511,7 +511,6 @@ public:
 int main()
 {
     PBR_render pbr_render_widget{900, 800, "pbr_render"};
-    pbr_render_widget.enable_gui(false);
     pbr_render_widget.render();
     return 0;
 }
