@@ -1,5 +1,8 @@
 /.cache
 .DS_Store
-/build
+build/
 /build-vs2022/
 /cmake-build-debug/
+compile_commands.json
+/out/
+/log/

@@ -4,18 +4,17 @@
 #include <imgui.h>
 #include <vector>
 
-#include "PrecomputedRender.hpp"
+#include "Material.hpp"
+#include "Model.hpp"
 #include "PostprocessRender.hpp"
+#include "PrecomputedRender.hpp"
 #include "Shadow.hpp"
 #include "SkyboxRender.hpp"
-#include "Model.hpp"
-#include "Material.hpp"
 
 class PBR_render : public GLWidget
 {
     /* 纹理材质 */
-    std::vector<Material> _materials
-    {
+    std::vector<Material> _materials{
         {TEXTURE_PATH + "pbr/rusted_iron"},
         {TEXTURE_PATH + "pbr/gold"},
         {TEXTURE_PATH + "pbr/plastic"},
@@ -38,38 +37,22 @@ class PBR_render : public GLWidget
     /* 光照计算资源 */
     FrameBuffer light_fb;
     GLuint light_result_texture;
-    ShaderProgram light_sp
-    {
-        SHADERS_PATH + "render/light.vert",
-        SHADERS_PATH + "render/light.frag" 
-    };
-    ShaderProgram lighting_obj_sp
-    {
-        SHADERS_PATH + "forward/lighting_obj.vert",
-        SHADERS_PATH + "forward/lighting_obj.frag"
-    };
-
+    ShaderProgram light_sp{SHADERS_PATH + "render/light.vert", SHADERS_PATH + "render/light.frag"};
+    ShaderProgram lighting_obj_sp{SHADERS_PATH + "forward/lighting_obj.vert",
+                                  SHADERS_PATH + "forward/lighting_obj.frag"};
 
     /* light & shadow */
     // 用于光线透视矩阵
     float near_plane = 0.1f;
     float far_plane = 75.0f;
     // light data
-    Light direction_light
-    {
-        light_type::directional,
-        glm::vec3(10.0, 10.0, 10.0),
-        DirectionalLight{glm::vec3(1.0, 1.0, 1.0)}
-    }; 
-    Light point_light
-    {
-        light_type::point,
-        glm::vec3(30.0, 30.0, 30.0),
-        PointLight{glm::vec3(0.0f, 5.0f, 0.0f)/*position*/, {0.0, 1.0, 0.1}}
-    };
+    Light direction_light{light_type::directional, glm::vec3(10.0, 10.0, 10.0),
+                          DirectionalLight{glm::vec3(1.0, 1.0, 1.0)}};
+    Light point_light{light_type::point, glm::vec3(30.0, 30.0, 30.0),
+                      PointLight{glm::vec3(0.0f, 5.0f, 0.0f) /*position*/, {0.0, 1.0, 0.1}}};
     // shadow map
-    DirectionalShadow direction_shadow{2048};    
-    PointShadow point_shadow{2048};      
+    DirectionalShadow direction_shadow{2048};
+    PointShadow point_shadow{2048};
 
     /* 几何资源 */
     FrameBuffer gbuffer_fb;
@@ -77,34 +60,30 @@ class PBR_render : public GLWidget
     GLuint gbtx_albdeo;
     GLuint gbtx_normal;
     GLuint gbtx_effects;
-    ShaderProgram gbuffer_sp
-    {
-        SHADERS_PATH + "render/gbuffer.vert",
-        SHADERS_PATH + "render/gbuffer.frag" 
-    };    
+    ShaderProgram gbuffer_sp{SHADERS_PATH + "render/gbuffer.vert", SHADERS_PATH + "render/gbuffer.frag"};
 
     /* 后处理资源 */
     // regular display
-    PostprocessRender _display_pass{ SHADERS_PATH + "post_process/display.frag" };
+    PostprocessRender _display_pass{SHADERS_PATH + "post_process/display.frag"};
     // shadow debug
-    PostprocessRender _depth24_debug{ SHADERS_PATH + "post_process/depth24_debug.frag" };
+    PostprocessRender _depth24_debug{SHADERS_PATH + "post_process/depth24_debug.frag"};
     // color correction <- tone map + hdr
-    PostprocessRender _color_correction_pass{ SHADERS_PATH + "post_process/color_correction.frag" };
+    PostprocessRender _color_correction_pass{SHADERS_PATH + "post_process/color_correction.frag"};
     // aa
-    PostprocessRender _fxaa_pass{ SHADERS_PATH + "post_process/fxaa.frag" };
+    PostprocessRender _fxaa_pass{SHADERS_PATH + "post_process/fxaa.frag"};
     // motion blur
-    PostprocessRender _motion_blur_pass{ SHADERS_PATH + "post_process/motion_blur.frag" };
+    PostprocessRender _motion_blur_pass{SHADERS_PATH + "post_process/motion_blur.frag"};
     // bloom blur
-    PostprocessRender _h_bloom_blur_pass{ SHADERS_PATH + "post_process/horizontal_bloom_blur.frag" };
-    PostprocessRender _v_bloom_blur_pass{ SHADERS_PATH + "post_process/vertical_bloom_blur.frag" };
-    PostprocessRender _bright_extraction_pass{ SHADERS_PATH + "post_process/bright_extraction.frag" };
-    PostprocessRender _mixture_pass{ SHADERS_PATH + "post_process/mixture.frag" };
+    PostprocessRender _h_bloom_blur_pass{SHADERS_PATH + "post_process/horizontal_bloom_blur.frag"};
+    PostprocessRender _v_bloom_blur_pass{SHADERS_PATH + "post_process/vertical_bloom_blur.frag"};
+    PostprocessRender _bright_extraction_pass{SHADERS_PATH + "post_process/bright_extraction.frag"};
+    PostprocessRender _mixture_pass{SHADERS_PATH + "post_process/mixture.frag"};
     float _bloom_bright_threshold{1.0};
     // sao
-    PostprocessRender _sao_compute_pass{ SHADERS_PATH + "post_process/sao_compute.frag" };
-    PostprocessRender _sao_blur_pass{ SHADERS_PATH + "post_process/sao_blur.frag" };
+    PostprocessRender _sao_compute_pass{SHADERS_PATH + "post_process/sao_compute.frag"};
+    PostprocessRender _sao_blur_pass{SHADERS_PATH + "post_process/sao_blur.frag"};
     // sao debug
-    PostprocessRender _single_channel_debug{ SHADERS_PATH + "post_process/single_channel_debug.frag" };
+    PostprocessRender _single_channel_debug{SHADERS_PATH + "post_process/single_channel_debug.frag"};
 
     // debug
     bool _debug_sao{false};
@@ -123,10 +102,10 @@ class PBR_render : public GLWidget
 
     virtual void application() override
     {
-        utility::GLDebugGroup debug_group{ "Application Setup" };
+        utility::GLDebugGroup debug_group{"Application Setup"};
 
         stbi_set_flip_vertically_on_load(true);
-        
+
         // scene
         teapot_obj.load_single_obj(OBJ_PATH + "teapot.obj");
         teapot_model = glm::mat4(1.0);
@@ -145,13 +124,13 @@ class PBR_render : public GLWidget
         update_framebuffer_size();
         const int fb_width = framebuffer_width();
         const int fb_height = framebuffer_height();
-        
+
         // gbuffer set
         gbuffer_fb.bind();
         gbuffer_fb.create_render_object(fb_width, fb_height);
         utility::label_gl_object(GL_FRAMEBUFFER, gbuffer_fb, "GBuffer Framebuffer");
         auto pos_att = TEXTURE_2D_RGBA16F;
-        pos_att._mipmap = true;// 开启mipmap用于AlchemyAO
+        pos_att._mipmap = true; // 开启mipmap用于AlchemyAO
         gbtx_position = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, pos_att);
         utility::label_gl_object(GL_TEXTURE, gbtx_position, "GBuffer Position");
         gbuffer_fb.attach_color_texture(0, gbtx_position);
@@ -164,11 +143,12 @@ class PBR_render : public GLWidget
         gbtx_effects = TEXTURE_MANAGER.generate_texture_buffer(fb_width, fb_height, TEXTURE_2D_RGB16F);
         utility::label_gl_object(GL_TEXTURE, gbtx_effects, "GBuffer Effects");
         gbuffer_fb.attach_color_texture(3, gbtx_effects);
-        gbuffer_fb.active_draw_buffers({GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3});
+        gbuffer_fb.active_draw_buffers(
+            {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3});
         gbuffer_fb.checkFramebufferStatus();
         gbuffer_fb.unbind();
         Material::set_samplers(gbuffer_sp, 0);
-             
+
         // light
         light_fb.bind();
         light_fb.create_render_object(fb_width, fb_height);
@@ -185,7 +165,7 @@ class PBR_render : public GLWidget
         light_sp.set_sampler(4, "ibl_convolution");
         light_sp.set_sampler(5, "ibl_prefilter");
         light_sp.set_sampler(6, "ibl_brdf_lut");
-        light_sp.set_sampler(7, "env_cube");     
+        light_sp.set_sampler(7, "env_cube");
         light_sp.set_sampler(8, "d_shadow_text");
         light_sp.set_sampler(9, "p_shadow_text");
         light_sp.set_sampler(10, "sao_result");
@@ -245,7 +225,7 @@ class PBR_render : public GLWidget
         _sao_blur_pass._sp.set_sampler(0, "sao_compute_result");
 
         projection = get_projection();
-        view = CAMERA.get_view_matrix(); 
+        view = CAMERA.get_view_matrix();
         prev_view = view;
 
         utility::label_gl_object(GL_TEXTURE, _input_hdr, "HDR Environment Input");
@@ -254,15 +234,14 @@ class PBR_render : public GLWidget
         utility::label_gl_object(GL_PROGRAM, gbuffer_sp.get_id(), "GBuffer Shader");
         utility::label_gl_object(GL_PROGRAM, light_sp.get_id(), "Lighting Shader");
         utility::label_gl_object(GL_PROGRAM, lighting_obj_sp.get_id(), "Forward Light Object Shader");
-
     }
 
     void shadow_compute()
     {
-        utility::GLDebugGroup debug_group{ "Shadow Passes" };
+        utility::GLDebugGroup debug_group{"Shadow Passes"};
         // 计算方向阴影
         {
-            utility::GLDebugGroup pass_group{ "Directional Shadow Pass" };
+            utility::GLDebugGroup pass_group{"Directional Shadow Pass"};
             direction_shadow.begin(std::get<DirectionalLight>(direction_light.detail).direction);
             direction_shadow._sp.set_uniform("model", teapot_model);
             teapot_obj.render_elements();
@@ -272,7 +251,7 @@ class PBR_render : public GLWidget
         }
         // 计算点阴影
         {
-            utility::GLDebugGroup pass_group{ "Point Shadow Pass" };
+            utility::GLDebugGroup pass_group{"Point Shadow Pass"};
             point_shadow.begin(std::get<PointLight>(point_light.detail).position);
             point_shadow._sp.set_uniform("model", teapot_model);
             teapot_obj.render_elements();
@@ -291,13 +270,13 @@ class PBR_render : public GLWidget
         gbuffer_sp.set_uniform("proj_view_model", projection * view * model);
         gbuffer_sp.set_uniform("prev_proj_view_model", projection * prev_view * model);
         material.active(0);
-        m.render_elements();        
-    }    
+        m.render_elements();
+    }
 
     void geometry_render()
     {
-        utility::GLDebugGroup debug_group{ "GBuffer Pass" };
-        view = CAMERA.get_view_matrix(); 
+        utility::GLDebugGroup debug_group{"GBuffer Pass"};
+        view = CAMERA.get_view_matrix();
         gbuffer_fb.bind();
         set_framebuffer_viewport();
         gbuffer_sp.use();
@@ -307,7 +286,7 @@ class PBR_render : public GLWidget
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         static const float clear_g_position[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-        glClearBufferfv(GL_COLOR, 0, clear_g_position);// 写入默认深度值为1        
+        glClearBufferfv(GL_COLOR, 0, clear_g_position); // 写入默认深度值为1
         render_object(teapot_obj, teapot_model, _materials[_material_index]);
         render_object(floor_obj, floor_model, woodfloor);
         gbuffer_fb.unbind();
@@ -316,7 +295,7 @@ class PBR_render : public GLWidget
 
     void light_render()
     {
-        utility::GLDebugGroup debug_group{ "Lighting Pass" };
+        utility::GLDebugGroup debug_group{"Lighting Pass"};
         light_fb.bind();
         set_framebuffer_viewport();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -325,7 +304,7 @@ class PBR_render : public GLWidget
         light_sp.use();
         // geometry
         light_sp.set_uniform("eye_position", CAMERA.get_position());
-        light_sp.set_uniform("cube_uv_trans", glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection));        
+        light_sp.set_uniform("cube_uv_trans", glm::inverse(glm::mat4(glm::mat3(view))) * glm::inverse(projection));
         light_sp.set_uniform("fragment_size", _frag_size);
         light_sp.set_uniform("d_light_matrix", (glm::mat4)direction_shadow.get_light_matrix());
         // light
@@ -350,7 +329,7 @@ class PBR_render : public GLWidget
         light_sp.set_uniform("sao_enable", _sao_compute_pass._enable);
         light_sp.active_sampler(10, _sao_blur_pass);
         // render
-        VertexArray::render_empty_va();     
+        VertexArray::render_empty_va();
         // forawrd render light object
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer_fb);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, light_fb);
@@ -372,33 +351,33 @@ class PBR_render : public GLWidget
     // 颜色未校正 基于物理颜色处理
     GLuint physical_postprocess(GLuint input)
     {
-        utility::GLDebugGroup debug_group{ "Physical PostProcess" };
+        utility::GLDebugGroup debug_group{"Physical PostProcess"};
         if (_bright_extraction_pass._enable)
         {
             _bright_extraction_pass._sp.use();
             _bright_extraction_pass._sp.set_uniform<float>("threshold", _bloom_bright_threshold);
             {
-                utility::GLDebugGroup pass_group{ "Bright Extraction Pass" };
+                utility::GLDebugGroup pass_group{"Bright Extraction Pass"};
                 _bright_extraction_pass.execute(input);
             }
-            GLuint bloom_blur_target = _bright_extraction_pass;    
-            if (_h_bloom_blur_pass._enable && _v_bloom_blur_pass._enable) 
+            GLuint bloom_blur_target = _bright_extraction_pass;
+            if (_h_bloom_blur_pass._enable && _v_bloom_blur_pass._enable)
             {
                 for (int i = 0; i < 10; i++)
                 {
                     {
-                        utility::GLDebugGroup pass_group{ "Horizontal Bloom Blur Pass" };
+                        utility::GLDebugGroup pass_group{"Horizontal Bloom Blur Pass"};
                         _h_bloom_blur_pass.execute(bloom_blur_target);
                     }
                     {
-                        utility::GLDebugGroup pass_group{ "Vertical Bloom Blur Pass" };
+                        utility::GLDebugGroup pass_group{"Vertical Bloom Blur Pass"};
                         _v_bloom_blur_pass.execute(_h_bloom_blur_pass);
                     }
                     bloom_blur_target = (GLuint)_v_bloom_blur_pass;
                 }
             }
             {
-                utility::GLDebugGroup pass_group{ "Bloom Mixture Pass" };
+                utility::GLDebugGroup pass_group{"Bloom Mixture Pass"};
                 _mixture_pass.execute({input, bloom_blur_target});
             }
             input = _mixture_pass;
@@ -409,27 +388,27 @@ class PBR_render : public GLWidget
     // 颜色已校正 基于视觉颜色处理
     GLuint visiual_postprocess(GLuint input)
     {
-        utility::GLDebugGroup debug_group{ "Visual PostProcess" };
+        utility::GLDebugGroup debug_group{"Visual PostProcess"};
         if (_motion_blur_pass._enable)
         {
-            utility::GLDebugGroup pass_group{ "Motion Blur Pass" };
+            utility::GLDebugGroup pass_group{"Motion Blur Pass"};
             _motion_blur_pass.execute({input, gbtx_effects});
             input = _motion_blur_pass;
-        }        
+        }
         if (_fxaa_pass._enable)
         {
-            utility::GLDebugGroup pass_group{ "FXAA Pass" };
+            utility::GLDebugGroup pass_group{"FXAA Pass"};
             _fxaa_pass.execute(input);
             input = _fxaa_pass;
         }
         return input;
-    }    
+    }
 
     GLuint postprocess(GLuint input)
     {
         GLuint physical_result = physical_postprocess(input);
         {
-            utility::GLDebugGroup pass_group{ "Color Correction Pass" };
+            utility::GLDebugGroup pass_group{"Color Correction Pass"};
             _color_correction_pass.execute(physical_result);
         }
         return visiual_postprocess(_color_correction_pass);
@@ -437,19 +416,19 @@ class PBR_render : public GLWidget
 
     void sao_compute()
     {
-        utility::GLDebugGroup debug_group{ "SAO Passes" };
+        utility::GLDebugGroup debug_group{"SAO Passes"};
         _sao_compute_pass._sp.use();
         _sao_compute_pass._sp.set_uniform("position_transform", view);
         _sao_compute_pass._sp.set_uniform("normal_transform", normal_matrix);
         _sao_compute_pass._sp.set_uniform("eye_position", CAMERA.get_position());
         {
-            utility::GLDebugGroup pass_group{ "SAO Compute Pass" };
+            utility::GLDebugGroup pass_group{"SAO Compute Pass"};
             _sao_compute_pass.execute({gbtx_position, gbtx_normal});
         }
         _sao_blur_pass._sp.use();
         _sao_blur_pass._sp.set_uniform("frag_size", _frag_size);
         {
-            utility::GLDebugGroup pass_group{ "SAO Blur Pass" };
+            utility::GLDebugGroup pass_group{"SAO Blur Pass"};
             _sao_blur_pass.execute(_sao_compute_pass);
         }
     }
@@ -463,7 +442,7 @@ class PBR_render : public GLWidget
             sao_compute();
             if (_debug_sao)
             {
-                utility::GLDebugGroup pass_group{ "SAO Debug Display Pass" };
+                utility::GLDebugGroup pass_group{"SAO Debug Display Pass"};
                 _single_channel_debug.render(_sao_blur_pass);
                 return;
             }
@@ -471,15 +450,15 @@ class PBR_render : public GLWidget
         light_render();
         GLuint final_texture = postprocess(light_result_texture);
         {
-            utility::GLDebugGroup pass_group{ "Final Display Pass" };
+            utility::GLDebugGroup pass_group{"Final Display Pass"};
             _display_pass.render(final_texture);
         }
     }
 
     virtual void gui_operation() override
     {
-        const char* material_items[] = { u8"rusted iron", u8"gold", u8"plastic", u8"wall" };
-        ImGui::Combo("Teapot Material", &_material_index, material_items, IM_ARRAYSIZE(material_items));        
+        const char* material_items[] = {u8"rusted iron", u8"gold", u8"plastic", u8"wall"};
+        ImGui::Combo("Teapot Material", &_material_index, material_items, IM_ARRAYSIZE(material_items));
         DirectionalLight* dl = std::get_if<DirectionalLight>(&direction_light.detail);
         ImGui::SliderFloat(u8"direction light.x", &dl->direction.x, -10.0, 10.0);
         ImGui::SliderFloat(u8"direction light.z", &dl->direction.z, -10.0, 10.0);
@@ -492,7 +471,8 @@ class PBR_render : public GLWidget
         {
             ImGui::Checkbox(u8"debug render sao", &_debug_sao);
         }
-        if (_debug_sao) return;
+        if (_debug_sao)
+            return;
         ImGui::Checkbox(u8"bloom blur", &_bright_extraction_pass._enable);
         if (_bright_extraction_pass._enable)
         {
@@ -502,8 +482,8 @@ class PBR_render : public GLWidget
         ImGui::Checkbox(u8"fxaa", &_fxaa_pass._enable);
     }
 
-public:
-    PBR_render(int width, int height, std::string_view title) : GLWidget(width,height,title,true) 
+  public:
+    PBR_render(int width, int height, std::string_view title) : GLWidget(width, height, title, true)
     {
     }
 };
